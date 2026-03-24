@@ -1,4 +1,4 @@
-version: "3.8"
+# version: "3.8"
 
 services:
   app:
@@ -19,9 +19,9 @@ services:
       dockerfile: docker/db/Dockerfile
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: intern_db
+      MYSQL_DATABASE: sazanami_db
     ports:
-      - "3306:3306"
+      - "3307:3306"
     networks:
       - fuelphp-network
 

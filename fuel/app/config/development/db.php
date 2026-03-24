@@ -4,20 +4,11 @@
  */
 
 return array(
-	'default' => array(
-		'type'        => 'mysqli',
-		'connection'  => array(
-			'hostname'   => 'db',
-			'database'   => 'fuelphp',
-			'username'   => 'root',
-			'password'   => 'root',
-			'persistent' => false,
-		),
-		'identifier'   => '`',
-		'table_prefix' => '',
-		'charset'      => 'utf8',
-		'collation'    => 'utf8_unicode_ci',
-		'enable_cache' => true,
-		'profiling'    => false,
-	),
+    'default' => array(
+        'connection' => array(
+            'dsn'        => 'mysql:host=db;dbname=sazanami_db', 
+            'username'   => 'root',
+            'password'   => 'root',
+        ),
+    ),
 );
