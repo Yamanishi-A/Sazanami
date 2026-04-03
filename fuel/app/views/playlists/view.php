@@ -75,8 +75,12 @@
         
         <div class="bg-white/60 backdrop-blur-md rounded-3xl p-8 shadow-sm border border-border">
             <div class="flex flex-col md:flex-row items-center gap-8">
-                <div class="w-48 h-48 rounded-2xl bg-gradient-to-br from-secondary to-accent flex items-center justify-center shadow-md flex-shrink-0">
-                    <i data-lucide="music" class="w-20 h-20 text-primary/60"></i>
+                <div class="w-48 h-48 rounded-2xl bg-gradient-to-br from-secondary to-accent flex items-center justify-center shadow-md flex-shrink-0 overflow-hidden">
+                    <?php if (!empty($playlist['cover_image'])): ?>
+                        <img src="<?php echo htmlspecialchars($playlist['cover_image'], ENT_QUOTES, 'UTF-8'); ?>" alt="Cover Image" class=" w-full h-full object-cover">
+                    <?php else: ?>
+                        <i data-lucide="list-music" class="w-20 h-20 text-primary/60"></i>
+                    <?php endif; ?>
                 </div>
                 <div class="flex-1 text-center md:text-left">
                     <h2 class="text-4xl font-bold text-foreground mb-4">
