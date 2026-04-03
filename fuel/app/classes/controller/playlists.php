@@ -38,62 +38,45 @@ class Controller_Playlists extends Controller_Base
     // 詳細表示
     public function action_view($id = null)
     {
-        if ( ! $id) \Response::redirect('playlists/index');
-
-        // プレイリストの所有者チェック
-        $playlist = \DB::select()->from('playlists')
-            ->where('id', $id)
-            ->where('user_id', $this->current_user['id'])
-            ->execute()->current();
-
-        if ( ! $playlist) {
-            \Response::redirect('playlists/index');
+        if ($id === null) {
+            return \Response::redirect('playlists/index');
         }
 
-        // 楽曲追加
-        if (\Input::method() == 'POST') {
-            $url = \Input::post('url');
-            
-            try {
-                $track_info = $this->_parse_url($url);
+        // ログインユーザーIDを取得（未ログインの場合は null）
+        $user_id = \Session::get('user_id');
 
-                $existing_track = \DB::select()->from('tracks')->where('url', $url)->execute()->current();
-                
-                if ($existing_track) {
-                    $track_id = $existing_track['id'];
-                } else {
-                    list($track_id, $rows) = \DB::insert('tracks')->set(array(
-                        'url'        => $url,
-                        'platform'   => $track_info['platform'],
-                        'title'      => $track_info['title'],
-                        'created_at' => date('Y-m-d H:i:s'),
-                    ))->execute();
-                }
-
-                \DB::insert('playlist_tracks')->set(array(
-                    'playlist_id' => $id,
-                    'track_id'    => $track_id,
-                    'created_at'  => date('Y-m-d H:i:s'),
-                ))->execute();
-
-                \Response::redirect('playlists/view/' . $id);
-
-            } catch (\Exception $e) {
-                $data['error'] = $e->getMessage();
-            }
+        // プレイリスト本体の取得
+        $playlist = \DB::select()->from('playlists')->where('id', $id)->execute()->current();
+        if (!$playlist) {
+            return \Response::redirect('/'); // 存在しない場合はトップへ
         }
 
-        // プレイリスト内の楽曲取得
-        $data['tracks'] = \DB::select('t.*', array('pt.id', 'pt_id'), array('pt.created_at', 'added_at'))
-            ->from(array('tracks', 't'))
-            ->join(array('playlist_tracks', 'pt'), 'INNER')
-            ->on('t.id', '=', 'pt.track_id')
+        // ==========================================
+        // ▼ 追加: ログインユーザーが「このプレイリストの作者」かどうか判定
+        // ==========================================
+        $is_owner = ($user_id && $playlist['user_id'] == $user_id);
+
+        // --- 以下は既存の楽曲取得処理など ---
+        $query = \DB::select('t.*', array('pt.id', 'pt_id'))
+            ->from(array('playlist_tracks', 'pt'))
+            ->join(array('tracks', 't'), 'INNER')->on('pt.track_id', '=', 't.id')
             ->where('pt.playlist_id', $id)
-            ->order_by('pt.created_at', 'desc')
-            ->execute()->as_array();
+            ->order_by('pt.created_at', 'asc')
+            ->execute();
+        $tracks = $query->as_array();
 
-        $data['playlist'] = $playlist;
-        return \View::forge('playlists/view', $data);
+        // ユーザー情報を取得（ヘッダー表示用）
+        $user = $user_id ? \DB::select()->from('users')->where('id', $user_id)->execute()->current() : null;
+
+        $view = \View::forge('playlists/view');
+        $view->set('playlist', $playlist);
+        $view->set('tracks', $tracks);
+        $view->set('user', $user);
+        
+        // ▼ 追加: 判定フラグをビュー（HTML）に渡す
+        $view->set('is_owner', $is_owner);
+
+        return \Response::forge($view);
     }
 
     // 編集

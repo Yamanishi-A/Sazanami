@@ -23,10 +23,10 @@ class Controller_Base extends Controller
         }
 
         $uri = Uri::string();
-        $public_uris = array('auth/login', 'auth/signup', '', 'welcome/index'); 
+        $public_uris = array('auth/login', 'auth/signup', '', 'welcome/index', 'playlists/discover', 'playlists/view'); 
 
         if ( ! $this->current_user && ! in_array($uri, $public_uris)) {
-            Response::redirect('auth/login');
+            Response::redirect('');
         }
     }
 }
