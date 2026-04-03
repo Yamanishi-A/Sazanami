@@ -53,44 +53,13 @@
             </p>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pt-4" data-bind="template: { name: 'playlist-card-template', foreach: discoverPlaylists }"></div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" data-bind="foreach: discoverPlaylists">
+            <div data-bind="component: { name: 'playlist-card', params: $data }"></div>
+        </div>
     </main>
 </div>
 
-<script type="text/html" id="playlist-card-template">
-    <a data-bind="attr: { href: '/playlists/view/' + id }" class="group block cursor-pointer">
-        <div class="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-border/50 hover:border-primary/30 h-full flex flex-col">
-            
-            <div class="aspect-square w-full overflow-hidden bg-gradient-to-br from-secondary/30 to-accent/30 relative">
-                <img data-bind="attr: { src: coverImage, alt: title }" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-secondary/40 to-accent/60 group-hover:from-secondary/60 group-hover:to-accent/80 transition-all">
-                    <i data-lucide="list-music" class="w-20 h-20 text-primary/60"></i>
-                </div>
-                </div>
-
-            <div class="p-4 space-y-3 flex flex-col flex-1">
-                <h3 class="text-lg font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors" data-bind="text: title"></h3>
-
-                <div class="flex items-center gap-2">
-                    <div class="w-6 h-6 rounded-full bg-gradient-to-br from-secondary to-accent flex items-center justify-center flex-shrink-0 overflow-hidden">
-                        <img data-bind="attr: { src: creatorAvatar, alt: creatorName }" class="w-full h-full object-cover" />
-                        <i data-lucide="user" class="w-3 h-3 text-primary"></i>
-                        </div>
-                    <p class="text-sm text-muted-foreground truncate" data-bind="text: creatorName"></p>
-                </div>
-
-                <div class="mt-auto flex items-center justify-between pt-1">
-                    <p class="text-sm text-muted-foreground" data-bind="text: trackCount + (trackCount === 1 ? ' track' : ' tracks')"></p>
-                    
-                    <div class="flex items-center gap-1.5" data-bind="foreach: platforms">
-                        <div class="opacity-70" data-bind="platformIcon: $data"></div>
-                    </div>
-                </div>
-            </div>
-            
-        </div>
-    </a>
-</script>
+<?php echo View::forge('shared/playlist_card'); ?>
 
 <script>
     // プラットフォーム固有のSVGアイコンと色を出力するカスタムバインディング

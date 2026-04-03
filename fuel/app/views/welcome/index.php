@@ -30,6 +30,7 @@
 </head>
 <body class="bg-slate-50">
 
+<?php $is_logged_in = \Session::get('user_id') ? true : false; ?>
 <?php echo View::forge('shared/header', array('user' => isset($user) ? $user : null)); ?>
 
 <div id="landing-page" class="min-h-screen relative overflow-hidden">
@@ -63,9 +64,18 @@
                 Let your favorite music spread like gentle ripples
             </p>
             <div class="flex items-center justify-center gap-4 pt-6">
-                <button data-bind="click: openSignUpModal" class="inline-flex items-center gap-2 px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-all text-lg font-bold">
-                    <span>Sign Up</span>
-                </button>
+                <?php if ($is_logged_in): ?>
+                    <a href="/playlists/discover">
+                        <button class="inline-flex items-center gap-2 px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-all text-lg font-bold">
+                            <i data-lucide="compass" class="w-5 h-5"></i>
+                            <span>Explore Playlists</span>
+                        </button>
+                    </a>
+                <?php else: ?>
+                    <button data-bind="click: openSignUpModal" class="inline-flex items-center gap-2 px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-all text-lg font-bold">
+                        <span>Sign Up</span>
+                    </button>
+                <?php endif; ?>
             </div>
         </div>
     </section>
@@ -76,18 +86,8 @@
         </div>
 
         <div class="overflow-x-auto pb-4 -mx-6 px-6">
-            <div class="flex gap-6 min-w-max" data-bind="foreach: trendingPlaylists">
-                <a data-bind="attr: { href: '/shared/' + id }" class="group block cursor-pointer">
-                    <div class="bg-white rounded-3xl p-4 shadow-md hover:shadow-xl border border-border transition-all w-64">
-                        <div class="relative overflow-hidden rounded-2xl mb-4 h-64">
-                            <img data-bind="attr: { src: cover, alt: title }" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                            <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-secondary to-accent group-hover:opacity-80 transition-all">
-                                <svg class="w-20 h-20 text-primary/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
-                            </div>
-                            </div>
-                        <h3 class="text-lg text-foreground px-2 font-bold" data-bind="text: title"></h3>
-                    </div>
-                </a>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" data-bind="foreach: trendingPlaylists">
+                <div data-bind="component: { name: 'playlist-card', params: $data }"></div>
             </div>
         </div>
     </section>
@@ -148,6 +148,8 @@
 
 </div>
 
+<?php echo View::forge('shared/playlist_card'); ?>
+
 <script>
     function LandingPageViewModel() {
         var self = this;
@@ -156,15 +158,9 @@
         self.isLoginModalOpen = ko.observable(false);
         self.isSignUpModalOpen = ko.observable(false);
 
-        // トレンドプレイリストのデータ（API等から取得するイメージですが、今回は固定値）
-        self.trendingPlaylists = ko.observableArray([
-            { id: "1", title: "Sunset Waves", cover: "" },
-            { id: "2", title: "Tropical Paradise", cover: "" },
-            { id: "3", title: "Mountain Serenity", cover: "" },
-            { id: "4", title: "Forest Calm", cover: "" },
-            { id: "5", title: "Garden Dreams", cover: "" },
-            { id: "6", title: "Ocean Blues", cover: "" }
-        ]);
+        var dbTrending = <?php echo isset($trending_playlists) ? json_encode($trending_playlists) : '[]'; ?>;
+
+        self.trendingPlaylists = ko.observableArray(dbTrending);
 
         // モーダルを開閉するメソッド
         self.openLoginModal = function() {
@@ -182,6 +178,7 @@
             self.isSignUpModalOpen(false);
         };
     }
+    lucide.createIcons();
 
     // Knockout.jsの起動（HTMLとViewModelを紐付ける）
     ko.applyBindings(new LandingPageViewModel(), document.getElementById('landing-page'));
