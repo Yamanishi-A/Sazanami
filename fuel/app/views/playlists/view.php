@@ -89,10 +89,15 @@
                         <i data-lucide="play" class="w-5 h-5 fill-current"></i>
                         <span>Play All</span>
                     </button>
+                    <button data-bind="click: handleShare" class="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-50 text-foreground font-bold rounded-xl shadow-sm border border-border hover:shadow-md transition-all">
+                        <i data-lucide="share-2" class="w-5 h-5"></i>
+                                Share
+                    </button>
                 </div>
             </div>
         </div>
 
+        <?php if ($is_owner): ?>
         <div class="bg-white rounded-2xl p-6 shadow-sm border border-border">
             <h3 class="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
                 <i data-lucide="link" class="w-5 h-5 text-primary"></i>
@@ -119,6 +124,7 @@
                 </button>
             </form>
         </div>
+        <?php endif; ?>
 
         <div>
             <h3 class="text-xl mb-4 text-foreground font-bold flex items-center justify-between">
@@ -159,9 +165,11 @@
                         </div>
                     </div>
 
+                    <?php if ($is_owner): ?>
                     <button data-bind="click: $parent.handleDeleteTrack" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" aria-label="Delete track">
                         <i data-lucide="trash-2" class="w-5 h-5"></i>
                     </button>
+                    <?php endif ?>
                 </div>
             </div>
         </div>
@@ -279,6 +287,24 @@
             .catch(error => {
                 alert('通信エラーが発生しました。');
             });
+        };
+
+        self.handleShare = function() {
+            // 現在開いているページのURLを取得
+            var url = window.location.href;
+            
+            // クリップボードAPIを使用してコピー
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(url).then(function() {
+                    alert("プレイリストのリンクをクリップボードにコピーしました！\n" + url);
+                }).catch(function(err) {
+                    alert("コピーに失敗しました。URLバーから直接コピーしてください。");
+                    console.error('Failed to copy: ', err);
+                });
+            } else {
+                // SSL(https)環境でない場合等のフォールバック
+                alert("このブラウザでは自動コピーができません。\n以下のURLを手動でコピーしてください：\n\n" + url);
+            }
         };
     }
 
