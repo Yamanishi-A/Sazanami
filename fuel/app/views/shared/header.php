@@ -14,6 +14,10 @@
                 <?php if ($is_logged_in): ?>
                     <a href="/playlists/discover" class="text-muted-foreground hover:text-primary transition-colors font-medium mr-2 hidden sm:block">Discover</a>
                     <a href="/playlists/index" class="text-muted-foreground hover:text-primary transition-colors font-medium mr-2 hidden sm:block">My Playlists</a>
+
+                    <a href="/auth/logout" class="text-xs font-bold text-red-500 hover:text-red-600 transition-colors flex items-center gap-1 ml-2 px-3 py-1 bg-red-50 rounded-lg border border-red-100">
+                        Logout
+                    </a>
                     
                     <a href="/playlists/settings" class="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-accent flex items-center justify-center border-4 border-white shadow-lg overflow-hidden" aria-label="Settings">
                         <?php if (!empty($user['icon'])): ?>
@@ -21,7 +25,7 @@
                         <?php else: ?>
                             <i data-lucide="user" class="w-6 h-6 text-primary"></i>
                         <?php endif; ?>
-                </a>
+                    </a>
                 <?php else: ?>
                     <button data-bind="click: openLoginModal" class="px-5 py-2 rounded-full text-primary hover:bg-secondary/50 transition-colors font-medium">
                         Log In

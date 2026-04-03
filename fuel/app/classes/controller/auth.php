@@ -52,6 +52,6 @@ class Controller_Auth extends Controller_Base
     public function action_logout()
     {
         Session::destroy();
-        Response::redirect('auth/login');
+        Response::redirect('/');
     }
 }
