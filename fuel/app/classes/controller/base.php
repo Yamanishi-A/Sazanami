@@ -22,11 +22,17 @@ class Controller_Base extends Controller
             }
         }
 
-        $uri = Uri::string();
-        $public_uris = array('auth/login', 'auth/signup', '', 'welcome/index', 'playlists/discover', 'playlists/view'); 
+        if (!Session::get('user_id')) {
+            $controller = Request::active()->controller;
+            $action = Request::active()->action;
+            
+            $is_welcome = ($controller === 'Controller_Welcome');
+            $is_auth = ($controller === 'Controller_Auth');
+            $is_public_playlist = ($controller === 'Controller_Playlists' && in_array($action, ['discover', 'view']));
 
-        if ( ! $this->current_user && ! in_array($uri, $public_uris)) {
-            Response::redirect('');
+            if (!$is_welcome && !$is_auth && !$is_public_playlist) {
+                return Response::redirect('/');
+            }
         }
     }
 }
