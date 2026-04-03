@@ -72,7 +72,7 @@
                         </button>
                     </a>
                 <?php else: ?>
-                    <button data-bind="click: openSignUpModal" class="inline-flex items-center gap-2 px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-all text-lg font-bold">
+                    <button onclick="window.headerViewModel && window.headerViewModel.openSignUpModal()" class="inline-flex items-center gap-2 px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-all text-lg font-bold">
                         <span>Sign Up</span>
                     </button>
                 <?php endif; ?>
@@ -97,55 +97,6 @@
             <p>© 2026 Sazanami. Let your music flow like gentle ocean ripples.</p>
         </div>
     </footer>
-
-    <div data-bind="visible: isLoginModalOpen" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center">
-        <div data-bind="click: closeModals" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 m-4">
-            <h2 class="text-2xl font-bold text-center mb-6 text-primary">Log In</h2>
-            <form action="/auth/login" method="POST" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" name="email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input type="password" name="password" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                </div>
-                <button type="submit" class="w-full py-3 bg-primary text-white rounded-full font-bold hover:bg-primary/90 transition-colors">Log In</button>
-            </form>
-            <p class="mt-4 text-center text-sm text-gray-600">
-                アカウントをお持ちでないですか？ <a href="#" data-bind="click: openSignUpModal" class="text-primary font-bold hover:underline">新規登録</a>
-            </p>
-            <button data-bind="click: closeModals" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">✕</button>
-        </div>
-    </div>
-
-    <div data-bind="visible: isSignUpModalOpen" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center">
-        <div data-bind="click: closeModals" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 m-4">
-            <h2 class="text-2xl font-bold text-center mb-6 text-primary">Sign Up</h2>
-            <form action="/auth/signup" method="POST" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                    <input type="text" name="username" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" name="email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input type="password" name="password" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                </div>
-                <button type="submit" class="w-full py-3 bg-primary text-white rounded-full font-bold hover:bg-primary/90 transition-colors">Sign Up</button>
-            </form>
-            <p class="mt-4 text-center text-sm text-gray-600">
-                すでにアカウントをお持ちですか？ <a href="#" data-bind="click: openLoginModal" class="text-primary font-bold hover:underline">ログイン</a>
-            </p>
-            <button data-bind="click: closeModals" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">✕</button>
-        </div>
-    </div>
-
 </div>
 
 <?php echo View::forge('shared/playlist_card'); ?>
@@ -154,29 +105,9 @@
     function LandingPageViewModel() {
         var self = this;
 
-        // モーダルの表示状態を管理する変数（observableにすることで画面と連動する）
-        self.isLoginModalOpen = ko.observable(false);
-        self.isSignUpModalOpen = ko.observable(false);
-
         var dbTrending = <?php echo isset($trending_playlists) ? json_encode($trending_playlists) : '[]'; ?>;
 
         self.trendingPlaylists = ko.observableArray(dbTrending);
-
-        // モーダルを開閉するメソッド
-        self.openLoginModal = function() {
-            self.isSignUpModalOpen(false);
-            self.isLoginModalOpen(true);
-        };
-
-        self.openSignUpModal = function() {
-            self.isLoginModalOpen(false);
-            self.isSignUpModalOpen(true);
-        };
-
-        self.closeModals = function() {
-            self.isLoginModalOpen(false);
-            self.isSignUpModalOpen(false);
-        };
     }
     lucide.createIcons();
 

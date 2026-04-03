@@ -38,7 +38,7 @@
         </div>
     </header>
 
-    <?php if ($is_logged_in): ?>
+    <?php if (!$is_logged_in): ?>
         
         <div data-bind="visible: isLoginModalOpen" style="display: none;" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
             <div class="absolute inset-0" data-bind="click: closeModals"></div>
@@ -94,7 +94,7 @@
             <div class="absolute inset-0" data-bind="click: closeModals"></div>
             <div class="w-full max-w-md bg-white rounded-3xl p-10 shadow-2xl border border-border relative z-10">
                 <button data-bind="click: closeModals" class="absolute top-6 right-6 text-muted-foreground hover:text-foreground transition-colors">
-                    <?php echo View::forge('shared/logo', array('class' => 'w-6 h-6 text-primary')); ?>
+                    <i data-lucide="x" class="w-6 h-6"></i>
                 </button>
 
                 <div class="flex justify-center mb-6">
@@ -171,12 +171,11 @@
                 };
             }
 
-            // 他のページのKnockoutバインディングと衝突しないように、
-            // ヘッダーのdiv要素(global-header-component)に限定してバインドする
             document.addEventListener("DOMContentLoaded", function() {
                 var headerElement = document.getElementById('global-header-component');
                 if (headerElement) {
-                    ko.applyBindings(new HeaderViewModel(), headerElement);
+                    window.headerViewModel = new HeaderViewModel();
+                    ko.applyBindings(window.headerViewModel, headerElement);
                     if (typeof lucide !== 'undefined') {
                         lucide.createIcons({ root: headerElement });
                     }
