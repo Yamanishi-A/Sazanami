@@ -125,6 +125,73 @@ class Controller_Playlists extends Controller_Base
         \Response::redirect('playlists/index');
     }
 
+    // ユーザー設定
+    public function action_settings()
+    {
+        $data['user'] = $this->current_user;
+        return \View::forge('user/settings', $data);
+    }
+
+    // 一覧ページ
+    public function action_discover()
+    {
+        // 1. プレイリスト本体と、作成者(usersテーブル)の情報を結合して取得
+        $query = \DB::select(
+            'p.id',
+            'p.title',
+            'p.cover_image',
+            array('u.username', 'creatorName') // usersテーブルのusernameをcreatorNameとして取得
+        )
+        ->from(array('playlists', 'p'))
+        ->join(array('users', 'u'), 'INNER')->on('p.user_id', '=', 'u.id')
+        ->order_by('p.created_at', 'desc') // 新しい順
+        ->execute()
+        ->as_array();
+
+        $discover_playlists = array();
+
+        // 2. 各プレイリストに含まれる「楽曲数」と「プラットフォームの種類」を取得
+        foreach ($query as $playlist) {
+            
+            // そのプレイリストの楽曲数をカウント
+            $track_count = \DB::select(\DB::expr('COUNT(*) as count'))
+                ->from('playlist_tracks')
+                ->where('playlist_id', $playlist['id'])
+                ->execute()
+                ->get('count', 0);
+
+            // そのプレイリストに含まれる楽曲のプラットフォーム(youtube, spotify等)を重複なしで取得
+            $platforms_query = \DB::select('t.platform')
+                ->from(array('playlist_tracks', 'pt'))
+                ->join(array('tracks', 't'), 'INNER')->on('pt.track_id', '=', 't.id')
+                ->where('pt.playlist_id', $playlist['id'])
+                ->group_by('t.platform') // 種類をまとめる
+                ->execute()
+                ->as_array();
+
+            $platforms = array();
+            foreach ($platforms_query as $pq) {
+                $platforms[] = $pq['platform'];
+            }
+
+            // フロントエンド(Knockout.js)が要求するプロパティ名に合わせて配列を構築
+            $discover_playlists[] = array(
+                'id'            => $playlist['id'],
+                'title'         => $playlist['title'],
+                'coverImage'    => $playlist['cover_image'],
+                'creatorName'   => $playlist['creatorName'],
+                'creatorAvatar' => null, // 現状アバター画像機能がないためnull
+                'trackCount'    => (int)$track_count,
+                'platforms'     => $platforms
+            );
+        }
+
+        // ビューにデータを渡す
+        $data['playlists'] = $discover_playlists;
+
+        return \Response::forge(\View::forge('playlists/discover', $data));
+    }
+
     // url解析
     private function _parse_url($url)
     {
