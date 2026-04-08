@@ -123,7 +123,8 @@ class Controller_Playlists extends Controller_Base
             'p.id',
             'p.title',
             'p.cover_image',
-            array('u.username', 'creatorName') // usersテーブルのusernameをcreatorNameとして取得
+            array('u.username', 'creatorName'),
+            array('u.icon', 'creatorAvatar')
         )
         ->from(array('playlists', 'p'))
         ->join(array('users', 'u'), 'INNER')->on('p.user_id', '=', 'u.id')
@@ -163,7 +164,7 @@ class Controller_Playlists extends Controller_Base
                 'title'         => $playlist['title'],
                 'coverImage'    => $playlist['cover_image'],
                 'creatorName'   => $playlist['creatorName'],
-                'creatorAvatar' => null, // 現状アバター画像機能がないためnull
+                'creatorAvatar' => $playlist['creatorAvatar'],
                 'trackCount'    => (int)$track_count,
                 'platforms'     => $platforms
             );

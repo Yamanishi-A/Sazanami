@@ -14,14 +14,9 @@
                 <?php if ($is_logged_in): ?>
                     <a href="/playlists/discover" class="text-muted-foreground hover:text-primary transition-colors font-medium mr-2 hidden sm:block">Discover</a>
                     <a href="/playlists/index" class="text-muted-foreground hover:text-primary transition-colors font-medium mr-2 hidden sm:block">My Playlists</a>
-
-                    <a href="/auth/logout">
-                        <button class="px-5 py-2 rounded-full border-2 text-red-500 hover:text-red-600 transition-colors font-medium">
-                            Log Out
-                        </button>
-                    </a>
+                    <a href="/auth/logout" class="text-muted-foreground text-red-500 hover:text-red-600 transition-colors font-medium mr-2 hidden sm:block">Log Out</a>
                     
-                    <a href="/playlists/settings" class="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-accent flex items-center justify-center border-4 border-white shadow-lg overflow-hidden" aria-label="Settings">
+                    <a href="/playlists/settings" class="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-accent flex items-center justify-center border-2 border-white shadow-lg overflow-hidden" aria-label="Settings">
                         <?php if (!empty($user['icon'])): ?>
                             <img src="<?php echo htmlspecialchars($user['icon'], ENT_QUOTES, 'UTF-8'); ?>" alt="Profile Icon" class="w-full h-full object-cover">
                         <?php else: ?>

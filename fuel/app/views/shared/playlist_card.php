@@ -14,8 +14,8 @@
                 
                 <div class="flex items-center gap-2 mt-auto pt-2">
                     <div class="w-6 h-6 rounded-full overflow-hidden bg-secondary flex-shrink-0 border border-gray-200">
-                        <img data-bind="attr: { src: creatorAvatar }" class="w-full h-full object-cover" />
-                        <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary to-accent text-white">
+                        <img data-bind="visible: creatorAvatar, attr: { src: creatorAvatar }" class="w-full h-full object-cover" />
+                        <div data-bind="visible: !creatorAvatar" class="w-full h-full flex items-center justify-center to-accent text-primary bg-gradient-to-br from-secondary">
                             <i data-lucide="user" class="w-4 h-4"></i>
                         </div>
                         </div>
