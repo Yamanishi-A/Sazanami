@@ -109,7 +109,8 @@
 
         self.trendingPlaylists = ko.observableArray(dbTrending);
     }
-    lucide.createIcons();
+
+    setTimeout(function() { lucide.createIcons(); }, 100);
 
     // Knockout.jsの起動（HTMLとViewModelを紐付ける）
     ko.applyBindings(new LandingPageViewModel(), document.getElementById('landing-page'));
