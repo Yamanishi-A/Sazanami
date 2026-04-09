@@ -61,15 +61,21 @@
                     </div>
                 </div>
 
-                <div class="w-full max-w-sm h-14 rounded-lg overflow-hidden bg-black flex-shrink-0">
-                    <iframe data-bind="attr: { src: embedUrl }" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                    <div class="w-full h-full flex items-center justify-center text-xs text-white">
+                <div class="overflow-hidden bg-black transition-all duration-300"
+                     data-bind="css: {
+                         'relative w-[300px] h-20 rounded-lg flex-shrink-0': currentTrack() && currentTrack().platform === 'spotify',
+                         'fixed bottom-24 right-6 w-64 sm:w-80 aspect-video shadow-2xl rounded-xl z-[60] border border-gray-700': currentTrack() && currentTrack().platform !== 'spotify'
+                     }">
+                    
+                    <iframe data-bind="visible: embedUrl(), attr: { src: embedUrl, referrerpolicy: (currentTrack() && currentTrack().platform === 'niconico') ? 'no-referrer' : null }" class="w-full h-full absolute inset-0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    
+                    <div data-bind="visible: !embedUrl()" class="w-full h-full absolute inset-0 flex items-center justify-center text-xs text-white bg-black">
                         再生できないプラットフォームです
                     </div>
-                    </div>
+                </div>
 
-                <button data-bind="click: closePlayer" class="p-2 text-muted-foreground hover:text-foreground transition-colors">
-                    <i data-lucide="x" class="w-5 h-5"></i>
+                <button data-bind="click: closePlayer" class="p-2 flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors ml-auto">
+                    <i data-lucide="x" class="w-6 h-6"></i>
                 </button>
             </div>
         </div>
@@ -261,13 +267,38 @@
             var track = self.currentTrack();
             if (!track || !track.url) return null;
 
-            // YouTubeのURLからVideo IDを抽出する正規表現
-            var match = track.url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})/);
-            if (match && match[1]) {
-                // autoplay=1 を付けて自動再生させる
-                return "https://www.youtube.com/embed/" + match[1] + "?autoplay=1";
+            var url = track.url;
+            var platform = track.platform; // api.php で保存した 'youtube', 'spotify', 'niconico' のいずれか
+
+            // 1. YouTube の場合
+            if (platform === 'youtube' || url.indexOf('youtu') !== -1) {
+                var ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})/);
+                if (ytMatch && ytMatch[1]) {
+                    // autoplay=1 を付けて自動再生させる
+                    return "https://www.youtube.com/embed/" + ytMatch[1] + "?autoplay=1";
+                }
             }
-            return null; // YouTube以外は一旦null
+            
+            // 2. Spotify の場合
+            else if (platform === 'spotify' || url.indexOf('spotify') !== -1) {
+                // 通常のURL (https://open.spotify.com/track/xxxx) からIDを抽出
+                var spMatch = url.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
+                if (spMatch && spMatch[1]) {
+                    return "https://open.spotify.com/embed/track/" + spMatch[1] + "?utm_source=generator";
+                }
+            }
+            
+            // 3. ニコニコ動画 の場合
+            else if (platform === 'niconico' || url.indexOf('nico') !== -1) {
+                // 通常のURL (https://www.nicovideo.jp/watch/smxxxx または https://nico.ms/smxxxx) からIDを抽出
+                var nicoMatch = url.match(/(?:nicovideo\.jp\/watch\/|nico\.ms\/)(sm[0-9]+|nm[0-9]+|so[0-9]+|[a-zA-Z0-9]+)/);
+                if (nicoMatch && nicoMatch[1]) {
+                    // ニコニコの公式埋め込みプレイヤーURL
+                    return "https://embed.nicovideo.jp/watch/" + nicoMatch[1];
+                }
+            }
+
+            return null; // どれにも一致しない、または変換できない場合はnull
         });
 
         // ▼ 追加: 個別の再生ボタンが押された時 ▼
