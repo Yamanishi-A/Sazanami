@@ -32,20 +32,29 @@ class Controller_Auth extends Controller_Base
     public function action_login()
     {
         if (\Input::method() == 'POST') {
-            // fetch() で送られてきたJSONデータに対応
             $email = \Input::json('email') ?: \Input::post('email');
             $password = \Input::json('password') ?: \Input::post('password');
+            
+            // ★追加: リダイレクト先を取得（デフォルトはマイページ）
+            $redirect_to = \Input::json('redirect_to', '/playlists/index');
+
+            // もし現在地がトップページなら、ログイン後はマイページへ誘導する
+            if ($redirect_to === '/') {
+                $redirect_to = '/playlists/index';
+            }
 
             $user = \DB::select()->from('users')->where('email', $email)->execute()->current();
 
             if ($user && password_verify($password, $user['password_hash'])) {
                 \Session::set('user_id', $user['id']);
                 
-                // Ajaxリクエストの場合はJSONを返す
                 if (\Input::is_ajax() || \Input::json('email')) {
-                    return \Response::forge(json_encode(array('success' => true)), 200, array('Content-Type' => 'application/json'));
+                    return \Response::forge(json_encode(array(
+                        'success' => true,
+                        'redirect_to' => $redirect_to // ★追加: 指定されたURLを返す
+                    )), 200, array('Content-Type' => 'application/json'));
                 }
-                \Response::redirect('playlists/index');
+                \Response::redirect($redirect_to);
             } else {
                 // Ajaxリクエストの場合はJSONでエラーメッセージを返す
                 if (\Input::is_ajax() || \Input::json('email')) {

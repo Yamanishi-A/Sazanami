@@ -159,27 +159,30 @@
 
                 // ▼ 追加: ログイン処理 (Ajax)
                 self.handleLogin = function() {
-                    self.loginError(""); // エラーをリセット
+                    self.loginError("");
                     self.isLoggingIn(true);
+
+                    // ★追加: 現在のページのパスを取得 (クエリパラメータも含める)
+                    var currentPath = window.location.pathname + window.location.search;
 
                     fetch('/auth/login', {
                         method: 'POST',
                         headers: { 
                             'Content-Type': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest' // Ajaxリクエストであることを明示
+                            'X-Requested-With': 'XMLHttpRequest'
                         },
                         body: JSON.stringify({
                             email: self.loginEmail(),
-                            password: self.loginPassword()
+                            password: self.loginPassword(),
+                            redirect_to: currentPath // ★追加: サーバーに現在の場所を伝える
                         })
                     })
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            // 成功時はプレイリスト一覧へ移動
-                            window.location.href = '/playlists/index';
+                            // ★修正: サーバーから返ってきたリダイレクト先（または現在地）へ遷移
+                            window.location.href = data.redirect_to || currentPath;
                         } else {
-                            // 失敗時はモーダル内にエラーを表示
                             self.isLoggingIn(false);
                             self.loginError(data.error || 'ログインに失敗しました。');
                         }
