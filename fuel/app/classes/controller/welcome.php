@@ -37,6 +37,7 @@ class Controller_Welcome extends Controller_Base
         )
         ->from(array('playlists', 'p'))
         ->join(array('users', 'u'), 'INNER')->on('p.user_id', '=', 'u.id')
+        ->order_by('p.updated_at', 'desc')
         ->order_by('p.created_at', 'desc')
         ->limit(4)
         ->execute()

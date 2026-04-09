@@ -25,6 +25,7 @@
     </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.5.1/knockout-latest.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="bg-slate-50">
@@ -134,14 +135,20 @@
             <h3 class="text-xl mb-4 text-foreground font-bold flex items-center justify-between">
                 <span>Tracks (<span data-bind="text: tracks().length"></span>)</span>
             </h3>
-            
+    
             <div data-bind="visible: tracks().length === 0" style="display: none;" class="text-center py-12 bg-white/50 rounded-2xl border border-dashed border-gray-300">
                 <i data-lucide="music-4" class="w-12 h-12 text-gray-300 mx-auto mb-3"></i>
                 <p class="text-muted-foreground">URLを貼り付けて、最初の楽曲を追加しましょう。</p>
             </div>
 
-            <div class="space-y-3" data-bind="foreach: tracks">
+            <div class="space-y-3" data-bind="sortableList: tracks, foreach: tracks">
                 <div class="group flex items-center gap-4 bg-white p-3 pr-4 rounded-xl shadow-sm border border-border hover:shadow-md transition-all">
+                    
+                    <?php if ($is_owner): ?>
+                    <div class="drag-handle cursor-grab active:cursor-grabbing p-1 text-gray-300 hover:text-primary transition-colors flex-shrink-0">
+                        <i data-lucide="grip-vertical" class="w-5 h-5"></i>
+                    </div>
+                    <?php endif; ?>
                     
                     <div class="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 cursor-pointer" data-bind="click: $parent.handlePlayTrack">
                         
@@ -183,6 +190,56 @@
 
 <script>
     lucide.createIcons();
+
+    // ▼ 修正: SortableJS用のカスタムバインディング（完全動作版） ▼
+    ko.bindingHandlers.sortableList = {
+        init: function(element, valueAccessor, allBindings, viewModel, bindingContext) {
+            var list = valueAccessor();
+            var originalNextSibling; // ドラッグ開始時の「正しい位置」を記憶する変数
+
+            Sortable.create(element, {
+                animation: 150,
+                handle: '.drag-handle',
+                ghostClass: 'opacity-30',
+                dragClass: 'shadow-2xl',
+                
+                // ▼ 追加: ドラッグ開始時に、その要素のすぐ後ろにあるノード（Knockoutのコメント等）を記憶
+                onStart: function(evt) {
+                    originalNextSibling = evt.item.nextSibling;
+                },
+                
+                onEnd: function(evt) {
+                    if (evt.oldIndex === evt.newIndex) return;
+
+                    var itemEl = evt.item;
+                    
+                    // ▼ 修正: Sortableが移動させたDOMを、記憶しておいた「全く同じ場所」に寸分狂わず戻す
+                    // （これによりKnockoutのトラッキングが壊れるのを防ぎます）
+                    if (originalNextSibling) {
+                        element.insertBefore(itemEl, originalNextSibling);
+                    } else {
+                        element.appendChild(itemEl);
+                    }
+
+                    // ▼ DOMが完全に元通りになった後で、Knockoutの配列だけを書き換える
+                    // これにより、画面の再描画はKnockout自身が安全に行います
+                    var underlyingArray = list();
+                    var item = underlyingArray[evt.oldIndex];
+                    
+                    underlyingArray.splice(evt.oldIndex, 1);
+                    underlyingArray.splice(evt.newIndex, 0, item);
+                    
+                    // 配列の中身が変わったことをKnockoutに通知
+                    list.valueHasMutated();
+
+                    // サーバーへ並び順を保存
+                    if (bindingContext.$data.saveTrackOrder) {
+                        bindingContext.$data.saveTrackOrder();
+                    }
+                }
+            });
+        }
+    };
 
     function PlaylistDetailViewModel() {
         var self = this;
@@ -277,14 +334,14 @@
             fetch('/api/delete_track', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ pt_id: track.id }) // track.id には playlist_tracks の id が入っています
+                // ▼ 修正: track.id ではなく track.pt_id を送信する
+                body: JSON.stringify({ pt_id: track.pt_id }) 
             })
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
                     alert('エラー: ' + data.error);
                 } else if (data.success) {
-                    // DBから削除成功後、画面のアニメーションを伴ってリストから消す
                     self.tracks.remove(track);
                 }
             })
@@ -309,6 +366,32 @@
                 // SSL(https)環境でない場合等のフォールバック
                 alert("このブラウザでは自動コピーができません。\n以下のURLを手動でコピーしてください：\n\n" + url);
             }
+        };
+
+        self.saveTrackOrder = function() {
+            // ▼ 修正: track.id ではなく、中間テーブルの track.pt_id を取得する
+            var orderedIds = self.tracks().map(function(track) {
+                return track.pt_id; 
+            });
+
+            // ▼ 修正: api.php で定義されている 'reorder_tracks' エンドポイントに送る
+            fetch('/api/reorder_tracks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playlist_id: self.playlistId,
+                    track_ids: orderedIds // ▼ 修正: api.phpが期待している 'track_ids' という名前にする
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('順番の保存に失敗しました: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('通信エラーが発生しました。', error);
+            });
         };
     }
 

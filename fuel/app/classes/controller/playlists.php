@@ -61,7 +61,8 @@ class Controller_Playlists extends Controller_Base
             ->from(array('playlist_tracks', 'pt'))
             ->join(array('tracks', 't'), 'INNER')->on('pt.track_id', '=', 't.id')
             ->where('pt.playlist_id', $id)
-            ->order_by('pt.created_at', 'asc')
+            ->order_by('pt.sort_order', 'asc') // ▼ 追加: まず並び順カラムで昇順に並べる
+            ->order_by('pt.created_at', 'asc') // （並び順が同じ場合は追加した順）
             ->execute();
         $tracks = $query->as_array();
 
@@ -128,6 +129,7 @@ class Controller_Playlists extends Controller_Base
         )
         ->from(array('playlists', 'p'))
         ->join(array('users', 'u'), 'INNER')->on('p.user_id', '=', 'u.id')
+        ->order_by('p.updated_at', 'desc')
         ->order_by('p.created_at', 'desc') // 新しい順
         ->execute()
         ->as_array();

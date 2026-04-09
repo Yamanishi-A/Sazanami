@@ -31,6 +31,7 @@ class Controller_Api extends Controller_Base
                 'title'       => $title,
                 'description' => $description,
                 'created_at'  => date('Y-m-d H:i:s'),
+                'updated_at'  => date('Y-m-d H:i:s')
             ))->execute();
 
             // 成功したら、画面側ですぐに表示できるよう作成したデータを返す
@@ -98,15 +99,22 @@ class Controller_Api extends Controller_Base
                     'created_at'  => date('Y-m-d H:i:s'),
                 ))->execute();
 
+                \DB::update('playlists')
+                    ->value('updated_at', date('Y-m-d H:i:s'))
+                    ->where('id', $playlist_id)
+                    ->execute();
+
                 // フロントエンドに返すデータ（サムネイル等も含める）
                 return $this->response_json(array(
                     'success' => true,
                     'track' => array(
-                        'id' => $pt_id,
+                        // ▼ 修正: 'id' ではなく 'pt_id' として中間テーブルのIDを返す
+                        'pt_id' => $pt_id,
+                        'id' => $track_id, // 念のため楽曲本体のIDも含めておく
                         'title' => $title,
                         'platform' => $platform,
                         'url' => $url,
-                        'thumbnail_url' => $metadata['thumbnail'], // 画面表示用に返す
+                        'thumbnail_url' => $metadata['thumbnail'],
                         'artist' => $metadata['artist']
                     )
                 ));
@@ -130,8 +138,20 @@ class Controller_Api extends Controller_Base
             }
 
             try {
-                // playlist_tracks テーブルから紐付けデータを削除
-                \DB::delete('playlist_tracks')->where('id', $pt_id)->execute();
+                $pt_record = \DB::select('playlist_id')->from('playlist_tracks')->where('id', $pt_id)->execute()->current();
+                
+                if ($pt_record) {
+                    $playlist_id = $pt_record['playlist_id'];
+                    
+                    // playlist_tracks テーブルから紐付けデータを削除
+                    \DB::delete('playlist_tracks')->where('id', $pt_id)->execute();
+                    
+                    // プレイリストの updated_at を更新
+                    \DB::update('playlists')
+                        ->value('updated_at', date('Y-m-d H:i:s'))
+                        ->where('id', $playlist_id)
+                        ->execute();
+                }
                 
                 return $this->response_json(array('success' => true));
             } catch (\Exception $e) {
@@ -249,6 +269,7 @@ class Controller_Api extends Controller_Base
                     $update_data = array(
                         'title' => $title,
                         'description' => $description,
+                        'updated_at' => date('Y-m-d H:i:s')
                     );
                     // 新しい画像がアップロードされた場合のみ、カラムを更新する
                     if (\Input::post('remove_cover') === '1') {
@@ -270,6 +291,7 @@ class Controller_Api extends Controller_Base
                         'description' => $description,
                         'cover_image' => $cover_image,
                         'created_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s')
                     );
                     
                     list($new_id, $rows) = \DB::insert('playlists')->set($insert_data)->execute();
@@ -348,7 +370,7 @@ class Controller_Api extends Controller_Base
             }
 
             try {
-                $update_data = array('username' => $username, 'bio' => $bio);
+                $update_data = array('username' => $username, 'bio' => $bio, 'updated_at' => date('Y-m-d H:i:s'));
                 
                 // ▼ 修正: DBのカラム名を icon に変更
                 if ($remove_icon) {
@@ -379,7 +401,9 @@ class Controller_Api extends Controller_Base
             try {
                 // 簡易的なハッシュ化（実際はAuthパッケージ等の適切な方式に従ってください）
                 $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-                \DB::update('users')->set(array('password' => $hashed_password))->where('id', $user_id)->execute();
+                \DB::update('users')->set(
+                    array('password' => $hashed_password, 'updated_at' => date('Y-m-d H:i:s'))
+                )->where('id', $user_id)->execute();
                 return $this->response_json(array('success' => true));
             } catch (\Exception $e) {
                 return $this->response_json(array('error' => 'DB Error'), 500);
@@ -405,6 +429,46 @@ class Controller_Api extends Controller_Base
                 return $this->response_json(array('success' => true));
             } catch (\Exception $e) {
                 return $this->response_json(array('error' => 'Delete failed'), 500);
+            }
+        }
+    }
+
+    // ==========================================
+    // Ajax: プレイリストの楽曲並べ替え
+    // ==========================================
+    public function action_reorder_tracks()
+    {
+        if (\Input::method() == 'POST') {
+            $user_id = \Session::get('user_id');
+            $playlist_id = \Input::json('playlist_id');
+            $track_ids = \Input::json('track_ids'); // [pt_id1, pt_id2, pt_id3...] という順番の配列
+
+            if (!$user_id || empty($playlist_id) || !is_array($track_ids)) {
+                return $this->response_json(array('error' => 'Invalid data'), 400);
+            }
+
+            // セキュリティチェック: 自分が作成したプレイリストか確認
+            $playlist = \DB::select('user_id')->from('playlists')->where('id', $playlist_id)->execute()->current();
+            if (!$playlist || $playlist['user_id'] != $user_id) {
+                return $this->response_json(array('error' => 'Unauthorized'), 403);
+            }
+
+            try {
+                // 送られてきた配列のインデックス(0, 1, 2...)をそのまま sort_order としてUPDATE
+                foreach ($track_ids as $index => $pt_id) {
+                    \DB::update('playlist_tracks')
+                        ->value('sort_order', $index)
+                        ->where('id', $pt_id)
+                        ->where('playlist_id', $playlist_id)
+                        ->execute();
+                }
+                \DB::update('playlists')
+                    ->value('updated_at', date('Y-m-d H:i:s'))
+                    ->where('id', $playlist_id)
+                    ->execute();
+                return $this->response_json(array('success' => true));
+            } catch (\Exception $e) {
+                return $this->response_json(array('error' => 'DB Error'), 500);
             }
         }
     }
