@@ -1,31 +1,30 @@
 <?php
 
-class Controller_Auth extends Controller_Base
+class Controller_Auth extends \Controller_Base
 {
     // サインアップ処理
     public function action_signup()
     {
-        if (Input::method() == 'POST') {
-            $username = Input::post('username');
-            $email = Input::post('email');
-            $password = Input::post('password');
+        if (\Input::method() == 'POST') {
+            $username = \Input::post('username');
+            $email = \Input::post('email');
+            $password = \Input::post('password');
 
-            $password_hash = password_hash($password, PASSWORD_DEFAULT);
+            try {
+                // ▼ 修正: Modelにユーザー作成を依頼
+                $insert_id = \Model_User::create_user($username, $email, $password);
 
-            list($insert_id, $rows_affected) = DB::insert('users')->set(array(
-                'username'      => $username,
-                'email'         => $email,
-                'password_hash' => $password_hash,
-                'created_at'    => date('Y-m-d H:i:s'), // To DATETIME
-            ))->execute();
-
-            if ($insert_id) {
-                Session::set('user_id', $insert_id);
-                Response::redirect('playlists/index');
+                if ($insert_id) {
+                    \Session::set('user_id', $insert_id);
+                    \Response::redirect('playlists/index');
+                }
+            } catch (\Exception $e) {
+                // メールアドレス重複などのエラーハンドリング
+                $data['error'] = 'このメールアドレスは既に登録されているか、エラーが発生しました。';
             }
         }
 
-        return View::forge('auth/signup');
+        return \View::forge('auth/signup', isset($data) ? $data : array());
     }
 
     // ログイン処理
@@ -35,28 +34,27 @@ class Controller_Auth extends Controller_Base
             $email = \Input::json('email') ?: \Input::post('email');
             $password = \Input::json('password') ?: \Input::post('password');
             
-            // ★追加: リダイレクト先を取得（デフォルトはマイページ）
             $redirect_to = \Input::json('redirect_to', '/playlists/index');
-
-            // もし現在地がトップページなら、ログイン後はマイページへ誘導する
             if ($redirect_to === '/') {
                 $redirect_to = '/playlists/index';
             }
 
-            $user = \DB::select()->from('users')->where('email', $email)->execute()->current();
+            // ▼ 修正: Modelに認証を依頼
+            $user = \Model_User::authenticate($email, $password);
 
-            if ($user && password_verify($password, $user['password_hash'])) {
+            if ($user) {
+                // 認証成功
                 \Session::set('user_id', $user['id']);
                 
                 if (\Input::is_ajax() || \Input::json('email')) {
                     return \Response::forge(json_encode(array(
                         'success' => true,
-                        'redirect_to' => $redirect_to // ★追加: 指定されたURLを返す
+                        'redirect_to' => $redirect_to
                     )), 200, array('Content-Type' => 'application/json'));
                 }
                 \Response::redirect($redirect_to);
             } else {
-                // Ajaxリクエストの場合はJSONでエラーメッセージを返す
+                // 認証失敗
                 if (\Input::is_ajax() || \Input::json('email')) {
                     return \Response::forge(json_encode(array(
                         'success' => false, 
@@ -70,10 +68,10 @@ class Controller_Auth extends Controller_Base
         return \View::forge('auth/login', isset($data) ? $data : array());
     }
 
-    // ログアウト処理
+    // ログアウト処理 (※セッション破棄とリダイレクトはControllerの管轄なのでこのままでOKです)
     public function action_logout()
     {
-        Session::destroy();
-        Response::redirect('/');
+        \Session::destroy();
+        \Response::redirect('/');
     }
 }

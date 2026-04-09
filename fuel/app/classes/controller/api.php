@@ -1,10 +1,7 @@
 <?php
 
-class Controller_Api extends Controller_Base
+class Controller_Api extends \Controller_Base
 {
-    /**
-     * 配列をJSON形式にして返す共通メソッド
-     */
     private function response_json($data, $status = 200)
     {
         $response = \Response::forge(json_encode($data), $status);
@@ -12,13 +9,9 @@ class Controller_Api extends Controller_Base
         return $response;
     }
 
-    // ==========================================
-    // Ajax: プレイリストの作成
-    // ==========================================
     public function action_create_playlist()
     {
         if (\Input::method() == 'POST') {
-            // JavaScriptの fetch() からJSON形式で送られてくるデータを受け取る
             $title = \Input::json('title');
             $description = \Input::json('description');
 
@@ -26,133 +19,43 @@ class Controller_Api extends Controller_Base
                 return $this->response_json(array('error' => 'タイトルは必須です'), 400);
             }
 
-            list($insert_id, $rows) = \DB::insert('playlists')->set(array(
-                'user_id'     => $this->current_user['id'],
-                'title'       => $title,
-                'description' => $description,
-                'created_at'  => date('Y-m-d H:i:s'),
-                'updated_at'  => date('Y-m-d H:i:s')
-            ))->execute();
-
-            // 成功したら、画面側ですぐに表示できるよう作成したデータを返す
-            return $this->response_json(array(
-                'id'          => $insert_id,
-                'title'       => $title,
-                'description' => $description,
-            ));
+            try {
+                $insert_id = \Model_Playlist::create($this->current_user['id'], $title, $description);
+                return $this->response_json(array('id' => $insert_id, 'title' => $title, 'description' => $description));
+            } catch (\Exception $e) {
+                return $this->response_json(array('error' => '作成に失敗しました'), 500);
+            }
         }
     }
 
-    // ==========================================
-    // Ajax: 楽曲の追加（URL解析込み）
-    // ==========================================
     public function action_add_track()
     {
         if (\Input::method() == 'POST') {
             $playlist_id = \Input::json('playlist_id');
             $url = \Input::json('url');
 
+            if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
+                return $this->response_json(array('error' => 'Invalid URL'), 400);
+            }
+
             try {
-                if (empty($url) || ! filter_var($url, FILTER_VALIDATE_URL)) {
-                    throw new \Exception('Invalid URL');
-                }
-
-                // 1. プラットフォームの精密な判定
-                $platform = 'other';
-                if (strpos($url, 'youtu') !== false) {
-                    $platform = 'youtube';
-                } elseif (strpos($url, 'spotify') !== false) {
-                    $platform = 'spotify';
-                } elseif (strpos($url, 'nicovideo') !== false || strpos($url, 'nico.ms') !== false) {
-                    $platform = 'niconico';
-                }
-
-                // 2. URLから曲名、アーティスト、サムネイルを自動取得！
-                $metadata = $this->fetch_metadata($url, $platform);
-                $title = $metadata['title'];
-                $artist = $metadata['artist'];
-                $thumbnail = $metadata['thumbnail'];
-
-                // 3. 楽曲の登録・取得 (URLが既にDBにあるかチェック)
-                $existing_track = \DB::select()->from('tracks')->where('url', $url)->execute()->current();
-                
-                if ($existing_track) {
-                    $track_id = $existing_track['id'];
-                    // 既に登録済みの場合は、DB上のタイトルを使う
-                    $title = $existing_track['title']; 
-                } else {
-                    // 新規URLの場合はINSERT
-                    list($track_id, $rows) = \DB::insert('tracks')->set(array(
-                        'url'        => $url,
-                        'platform'   => $platform,
-                        'title'      => $title,
-                        'artist'     => $artist,
-                        'thumbnail_url'  => $thumbnail,
-                        'created_at' => date('Y-m-d H:i:s'),
-                    ))->execute();
-                }
-
-                // 4. 中間テーブルへ紐付け
-                list($pt_id, $rows) = \DB::insert('playlist_tracks')->set(array(
-                    'playlist_id' => $playlist_id,
-                    'track_id'    => $track_id,
-                    'created_at'  => date('Y-m-d H:i:s'),
-                ))->execute();
-
-                \DB::update('playlists')
-                    ->value('updated_at', date('Y-m-d H:i:s'))
-                    ->where('id', $playlist_id)
-                    ->execute();
-
-                // フロントエンドに返すデータ（サムネイル等も含める）
-                return $this->response_json(array(
-                    'success' => true,
-                    'track' => array(
-                        // ▼ 修正: 'id' ではなく 'pt_id' として中間テーブルのIDを返す
-                        'pt_id' => $pt_id,
-                        'id' => $track_id, // 念のため楽曲本体のIDも含めておく
-                        'title' => $title,
-                        'platform' => $platform,
-                        'url' => $url,
-                        'thumbnail_url' => $metadata['thumbnail'],
-                        'artist' => $metadata['artist']
-                    )
-                ));
-
+                $track_data = \Model_Track::add_to_playlist($playlist_id, $url);
+                \Model_Playlist::update_updated_at($playlist_id);
+                return $this->response_json(array('success' => true, 'track' => $track_data));
             } catch (\Exception $e) {
                 return $this->response_json(array('error' => $e->getMessage()), 400);
             }
         }
     }
 
-    // ==========================================
-    // Ajax: 楽曲の削除
-    // ==========================================
     public function action_delete_track()
     {
         if (\Input::method() == 'POST') {
             $pt_id = \Input::json('pt_id');
-
-            if (empty($pt_id)) {
-                return $this->response_json(array('error' => 'IDが指定されていません'), 400);
-            }
+            if (empty($pt_id)) return $this->response_json(array('error' => 'IDが指定されていません'), 400);
 
             try {
-                $pt_record = \DB::select('playlist_id')->from('playlist_tracks')->where('id', $pt_id)->execute()->current();
-                
-                if ($pt_record) {
-                    $playlist_id = $pt_record['playlist_id'];
-                    
-                    // playlist_tracks テーブルから紐付けデータを削除
-                    \DB::delete('playlist_tracks')->where('id', $pt_id)->execute();
-                    
-                    // プレイリストの updated_at を更新
-                    \DB::update('playlists')
-                        ->value('updated_at', date('Y-m-d H:i:s'))
-                        ->where('id', $playlist_id)
-                        ->execute();
-                }
-                
+                \Model_Track::delete_from_playlist($pt_id);
                 return $this->response_json(array('success' => true));
             } catch (\Exception $e) {
                 return $this->response_json(array('error' => '削除に失敗しました'), 500);
@@ -160,65 +63,6 @@ class Controller_Api extends Controller_Base
         }
     }
 
-    /**
-     * URLからタイトル、アーティスト名、サムネイルを取得するヘルパーメソッド
-     */
-    private function fetch_metadata($url, $platform)
-    {
-        // 初期値（取得できなかった場合）
-        $meta = array(
-            'title'     => 'Unknown Track',
-            'artist'    => 'Unknown Artist',
-            'thumbnail' => ''
-        );
-
-        // 1. oEmbed API を利用する (YouTube, Spotifyに有効。APIキー不要！)
-        $oembed_url = '';
-        if ($platform === 'youtube') {
-            $oembed_url = 'https://www.youtube.com/oembed?url=' . urlencode($url) . '&format=json';
-        } elseif ($platform === 'spotify') {
-            $oembed_url = 'https://open.spotify.com/oembed?url=' . urlencode($url);
-        }
-
-        if ($oembed_url) {
-            // 外部通信を行う（エラーが起きてもアプリが止まらないよう ignore_errors を設定）
-            $context = stream_context_create(array('http' => array('ignore_errors' => true)));
-            $response = @file_get_contents($oembed_url, false, $context);
-            
-            if ($response) {
-                $data = json_decode($response, true);
-                if ($data) {
-                    $meta['title']     = isset($data['title']) ? $data['title'] : $meta['title'];
-                    $meta['artist']    = isset($data['author_name']) ? $data['author_name'] : $meta['artist'];
-                    $meta['thumbnail'] = isset($data['thumbnail_url']) ? $data['thumbnail_url'] : $meta['thumbnail'];
-                    return $meta; // oEmbedで取得成功したらここで返す
-                }
-            }
-        }
-
-        // 2. oEmbedが使えない場合（ニコニコ動画など）は、HTMLの <title> タグを直接スクレイピングする
-        $context = stream_context_create(array('http' => array(
-            'ignore_errors' => true,
-            'header' => "User-Agent: Mozilla/5.0\r\n" // ボット弾きを回避するための偽装
-        )));
-        $html = @file_get_contents($url, false, $context);
-        
-        if ($html) {
-            // 正規表現で <title>〇〇</title> の中身を抜き出す
-            if (preg_match('/<title[^>]*>(.*?)<\/title>/is', $html, $matches)) {
-                $title = html_entity_decode(trim($matches[1]), ENT_QUOTES, 'UTF-8');
-                // 「 - YouTube」などの不要な文字を削る簡易処理
-                $title = str_replace(array(' - YouTube', ' - ニコニコ動画'), '', $title);
-                $meta['title'] = $title;
-            }
-        }
-
-        return $meta;
-    }
-
-    // ==========================================
-    // Ajax: プレイリストの保存（作成・編集・画像アップロード）
-    // ==========================================
     public function action_save_playlist()
     {
         if (\Input::method() == 'POST') {
@@ -226,104 +70,39 @@ class Controller_Api extends Controller_Base
             $title = \Input::post('title');
             $description = \Input::post('description');
             
-            // セッションからユーザーIDを取得（未ログインの場合は安全のため弾く）
             $user_id = \Session::get('user_id');
-            if (!$user_id) {
-                return $this->response_json(array('error' => 'ログインが必要です'), 401);
-            }
+            if (!$user_id) return $this->response_json(array('error' => 'ログインが必要です'), 401);
 
-            $cover_image = null;
-
-            // ▼ 修正版: 完全にこの if ブロックの中だけでアップロード処理を行います
-            // $_FILES['cover_image']['error'] も確認し、空のファイル送信も防ぎます
-            if (!empty($_FILES) && isset($_FILES['cover_image']) && $_FILES['cover_image']['error'] !== UPLOAD_ERR_NO_FILE) {
-                
-                $upload_dir = DOCROOT . 'assets/img/covers/';
-                if (!is_dir($upload_dir)) {
-                    mkdir($upload_dir, 0777, true);
-                }
-
-                $config = array(
-                    'path' => $upload_dir,
-                    'randomize' => true,
-                    'ext_whitelist' => array('img', 'jpg', 'jpeg', 'gif', 'png', 'webp'),
-                );
-
-                try {
-                    // ここでだけ process を呼びます
-                    \Upload::process($config);
-
-                    if (\Upload::is_valid()) {
-                        \Upload::save();
-                        $file = \Upload::get_files(0);
-                        $cover_image = '/assets/img/covers/' . $file['saved_as'];
-                    }
-                } catch (\Exception $e) {
-                    // 画像がない場合やエラー時はスルーして、文字データだけ保存へ進む
-                }
-            }
+            $cover_image = $this->handle_upload('cover_image', 'covers');
 
             try {
                 if ($id) {
-                    // ---------- 【編集（UPDATE）】 ----------
-                    $update_data = array(
-                        'title' => $title,
-                        'description' => $description,
-                        'updated_at' => date('Y-m-d H:i:s')
-                    );
-                    // 新しい画像がアップロードされた場合のみ、カラムを更新する
-                    if (\Input::post('remove_cover') === '1') {
-                        $update_data['cover_image'] = null;
-                    }
-                    if ($cover_image) {
-                        $update_data['cover_image'] = $cover_image;
-                    }
+                    $update_data = array('title' => $title, 'description' => $description);
+                    if (\Input::post('remove_cover') === '1') $update_data['cover_image'] = null;
+                    if ($cover_image) $update_data['cover_image'] = $cover_image;
                     
-                    \DB::update('playlists')->set($update_data)->where('id', $id)->where('user_id', $user_id)->execute();
-                    
+                    \Model_Playlist::update($id, $user_id, $update_data);
                     return $this->response_json(array('success' => true, 'mode' => 'edit', 'cover_image' => $cover_image));
-
                 } else {
-                    // ---------- 【新規作成（INSERT）】 ----------
-                    $insert_data = array(
-                        'user_id' => $user_id,
-                        'title' => $title,
-                        'description' => $description,
-                        'cover_image' => $cover_image,
-                        'created_at' => date('Y-m-d H:i:s'),
-                        'updated_at' => date('Y-m-d H:i:s')
-                    );
-                    
-                    list($new_id, $rows) = \DB::insert('playlists')->set($insert_data)->execute();
-                    
+                    $new_id = \Model_Playlist::create($user_id, $title, $description, $cover_image);
                     return $this->response_json(array('success' => true, 'mode' => 'create', 'id' => $new_id, 'cover_image' => $cover_image));
                 }
             } catch (\Exception $e) {
-                return $this->response_json(array('error' => 'データベースエラーが発生しました: ' . $e->getMessage()), 500);
+                return $this->response_json(array('error' => 'データベースエラーが発生しました'), 500);
             }
         }
     }
 
-    // ==========================================
-    // Ajax: プレイリストの削除
-    // ==========================================
     public function action_delete_playlist()
     {
         if (\Input::method() == 'POST') {
             $id = \Input::json('id');
             $user_id = \Session::get('user_id');
 
-            if (empty($id) || !$user_id) {
-                return $this->response_json(array('error' => '不正なリクエストです'), 400);
-            }
+            if (empty($id) || !$user_id) return $this->response_json(array('error' => '不正なリクエストです'), 400);
 
             try {
-                // 1. 中間テーブル（playlist_tracks）から関連する楽曲データを削除
-                \DB::delete('playlist_tracks')->where('playlist_id', $id)->execute();
-                
-                // 2. プレイリスト本体を削除（他人のものを消せないよう user_id も条件に含める）
-                \DB::delete('playlists')->where('id', $id)->where('user_id', $user_id)->execute();
-                
+                \Model_Playlist::delete($id, $user_id);
                 return $this->response_json(array('success' => true));
             } catch (\Exception $e) {
                 return $this->response_json(array('error' => '削除に失敗しました'), 500);
@@ -331,55 +110,27 @@ class Controller_Api extends Controller_Base
         }
     }
 
-    // ==========================================
-    // Ajax: ユーザー設定の更新（プロフィール・アイコン）
-    // ==========================================
     public function action_update_settings()
     {
         if (\Input::method() == 'POST') {
             $user_id = \Session::get('user_id');
             if (!$user_id) return $this->response_json(array('error' => 'Unauthorized'), 401);
 
-            $username = \Input::post('username');
-            $bio = \Input::post('bio');
-            // ▼ 修正: remove_icon に変更
-            $remove_icon = \Input::post('remove_icon') === '1';
+            $update_data = array(
+                'username' => \Input::post('username'),
+                'bio' => \Input::post('bio')
+            );
 
-            $icon_url = null;
+            $icon_url = $this->handle_upload('icon', 'icons');
 
-            // ▼ 修正: $_FILES['icon'] に変更
-            if (!empty($_FILES) && isset($_FILES['icon']) && $_FILES['icon']['error'] !== UPLOAD_ERR_NO_FILE) {
-                // 保存先ディレクトリも icons にすると綺麗です
-                $upload_dir = DOCROOT . 'assets/img/icons/';
-                if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-
-                $config = array(
-                    'path' => $upload_dir,
-                    'randomize' => true,
-                    'ext_whitelist' => array('jpg', 'jpeg', 'png', 'webp'),
-                );
-
-                try {
-                    \Upload::process($config);
-                    if (\Upload::is_valid()) {
-                        \Upload::save();
-                        $file = \Upload::get_files(0);
-                        $icon_url = '/assets/img/icons/' . $file['saved_as'];
-                    }
-                } catch (\Exception $e) { /* Error handling */ }
+            if (\Input::post('remove_icon') === '1') {
+                $update_data['icon'] = null;
+            } elseif ($icon_url) {
+                $update_data['icon'] = $icon_url;
             }
 
             try {
-                $update_data = array('username' => $username, 'bio' => $bio, 'updated_at' => date('Y-m-d H:i:s'));
-                
-                // ▼ 修正: DBのカラム名を icon に変更
-                if ($remove_icon) {
-                    $update_data['icon'] = null;
-                } elseif ($icon_url) {
-                    $update_data['icon'] = $icon_url;
-                }
-
-                \DB::update('users')->set($update_data)->where('id', $user_id)->execute();
+                \Model_User::update_settings($user_id, $update_data);
                 return $this->response_json(array('success' => true));
             } catch (\Exception $e) {
                 return $this->response_json(array('error' => 'DB Error'), 500);
@@ -387,9 +138,6 @@ class Controller_Api extends Controller_Base
         }
     }
 
-    // ==========================================
-    // Ajax: パスワードリセット
-    // ==========================================
     public function action_reset_password()
     {
         if (\Input::method() == 'POST') {
@@ -399,11 +147,7 @@ class Controller_Api extends Controller_Base
             if (!$user_id || empty($new_password)) return $this->response_json(array('error' => 'Invalid request'), 400);
 
             try {
-                // 簡易的なハッシュ化（実際はAuthパッケージ等の適切な方式に従ってください）
-                $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-                \DB::update('users')->set(
-                    array('password' => $hashed_password, 'updated_at' => date('Y-m-d H:i:s'))
-                )->where('id', $user_id)->execute();
+                \Model_User::reset_password($user_id, $new_password);
                 return $this->response_json(array('success' => true));
             } catch (\Exception $e) {
                 return $this->response_json(array('error' => 'DB Error'), 500);
@@ -411,9 +155,6 @@ class Controller_Api extends Controller_Base
         }
     }
 
-    // ==========================================
-    // Ajax: アカウント削除
-    // ==========================================
     public function action_delete_account()
     {
         if (\Input::method() == 'POST') {
@@ -421,10 +162,7 @@ class Controller_Api extends Controller_Base
             if (!$user_id) return $this->response_json(array('error' => 'Unauthorized'), 401);
 
             try {
-                // 関連データの削除
-                \DB::delete('playlists')->where('user_id', $user_id)->execute();
-                \DB::delete('users')->where('id', $user_id)->execute();
-                
+                \Model_User::delete_account($user_id);
                 \Session::destroy();
                 return $this->response_json(array('success' => true));
             } catch (\Exception $e) {
@@ -433,43 +171,53 @@ class Controller_Api extends Controller_Base
         }
     }
 
-    // ==========================================
-    // Ajax: プレイリストの楽曲並べ替え
-    // ==========================================
     public function action_reorder_tracks()
     {
         if (\Input::method() == 'POST') {
             $user_id = \Session::get('user_id');
             $playlist_id = \Input::json('playlist_id');
-            $track_ids = \Input::json('track_ids'); // [pt_id1, pt_id2, pt_id3...] という順番の配列
+            $track_ids = \Input::json('track_ids');
 
             if (!$user_id || empty($playlist_id) || !is_array($track_ids)) {
                 return $this->response_json(array('error' => 'Invalid data'), 400);
             }
 
-            // セキュリティチェック: 自分が作成したプレイリストか確認
-            $playlist = \DB::select('user_id')->from('playlists')->where('id', $playlist_id)->execute()->current();
-            if (!$playlist || $playlist['user_id'] != $user_id) {
-                return $this->response_json(array('error' => 'Unauthorized'), 403);
-            }
-
             try {
-                // 送られてきた配列のインデックス(0, 1, 2...)をそのまま sort_order としてUPDATE
-                foreach ($track_ids as $index => $pt_id) {
-                    \DB::update('playlist_tracks')
-                        ->value('sort_order', $index)
-                        ->where('id', $pt_id)
-                        ->where('playlist_id', $playlist_id)
-                        ->execute();
-                }
-                \DB::update('playlists')
-                    ->value('updated_at', date('Y-m-d H:i:s'))
-                    ->where('id', $playlist_id)
-                    ->execute();
+                \Model_Playlist::reorder_tracks($playlist_id, $user_id, $track_ids);
                 return $this->response_json(array('success' => true));
             } catch (\Exception $e) {
-                return $this->response_json(array('error' => 'DB Error'), 500);
+                $status = $e->getCode() ?: 500;
+                return $this->response_json(array('error' => $e->getMessage()), $status);
             }
         }
+    }
+
+    /**
+     * ファイルアップロードを処理する共通ヘルパーメソッド
+     */
+    private function handle_upload($field_name, $folder_name)
+    {
+        if (!empty($_FILES) && isset($_FILES[$field_name]) && $_FILES[$field_name]['error'] !== UPLOAD_ERR_NO_FILE) {
+            $upload_dir = DOCROOT . 'assets/img/' . $folder_name . '/';
+            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+
+            $config = array(
+                'path' => $upload_dir,
+                'randomize' => true,
+                'ext_whitelist' => array('img', 'jpg', 'jpeg', 'gif', 'png', 'webp'),
+            );
+
+            try {
+                \Upload::process($config);
+                if (\Upload::is_valid()) {
+                    \Upload::save();
+                    $file = \Upload::get_files(0);
+                    return '/assets/img/' . $folder_name . '/' . $file['saved_as'];
+                }
+            } catch (\Exception $e) {
+                return null;
+            }
+        }
+        return null;
     }
 }
