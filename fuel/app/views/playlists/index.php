@@ -146,7 +146,7 @@
             <form data-bind="submit: savePlaylist" class="space-y-6">
                 
                 <div>
-                    <label for="playlist-name" class="block text-sm font-bold mb-2 text-foreground">Playlist Title</label>
+                    <label for="playlist-name" class="block text-sm font-bold mb-2 text-foreground">Playlist Title<span class="text-red-500 ml-1">*</span></label>
                     <input 
                         id="playlist-name" 
                         type="text" 

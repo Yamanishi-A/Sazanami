@@ -58,7 +58,7 @@
 
                 <form action="/auth/login" method="POST" class="space-y-5">
                     <div>
-                        <label class="block text-sm font-bold mb-2 text-foreground">Email</label>
+                        <label class="block text-sm font-bold mb-2 text-foreground">Email<span class="text-red-500 ml-1">*</span></label>
                         <div class="relative">
                             <i data-lucide="mail" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></i>
                             <input type="email" name="email" placeholder="you@example.com" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground">
@@ -66,7 +66,7 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-bold mb-2 text-foreground">Password</label>
+                        <label class="block text-sm font-bold mb-2 text-foreground">Password<span class="text-red-500 ml-1">*</span></label>
                         <div class="relative">
                             <i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></i>
                             <input type="password" name="password" placeholder="Enter your password" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground">
@@ -107,21 +107,21 @@
 
                 <form action="/auth/signup" method="POST" class="space-y-4">
                     <div>
-                        <label class="block text-sm font-bold mb-1 text-foreground">Username</label>
+                        <label class="block text-sm font-bold mb-1 text-foreground">Username<span class="text-red-500 ml-1">*</span></label>
                         <div class="relative">
                             <i data-lucide="user" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></i>
                             <input type="text" name="username" placeholder="Your name" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-bold mb-1 text-foreground">Email</label>
+                        <label class="block text-sm font-bold mb-1 text-foreground">Email<span class="text-red-500 ml-1">*</span></label>
                         <div class="relative">
                             <i data-lucide="mail" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></i>
                             <input type="email" name="email" placeholder="you@example.com" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-bold mb-1 text-foreground">Password</label>
+                        <label class="block text-sm font-bold mb-1 text-foreground">Password<span class="text-red-500 ml-1">*</span></label>
                         <div class="relative">
                             <i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></i>
                             <input type="password" name="password" placeholder="Create a password" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
