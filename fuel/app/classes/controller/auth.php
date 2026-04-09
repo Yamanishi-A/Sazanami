@@ -31,21 +31,34 @@ class Controller_Auth extends Controller_Base
     // ログイン処理
     public function action_login()
     {
-        if (Input::method() == 'POST') {
-            $email = Input::post('email');
-            $password = Input::post('password');
+        if (\Input::method() == 'POST') {
+            // fetch() で送られてきたJSONデータに対応
+            $email = \Input::json('email') ?: \Input::post('email');
+            $password = \Input::json('password') ?: \Input::post('password');
 
-            $user = DB::select()->from('users')->where('email', $email)->execute()->current();
+            $user = \DB::select()->from('users')->where('email', $email)->execute()->current();
 
             if ($user && password_verify($password, $user['password_hash'])) {
-                Session::set('user_id', $user['id']);
-                Response::redirect('playlists/index');
+                \Session::set('user_id', $user['id']);
+                
+                // Ajaxリクエストの場合はJSONを返す
+                if (\Input::is_ajax() || \Input::json('email')) {
+                    return \Response::forge(json_encode(array('success' => true)), 200, array('Content-Type' => 'application/json'));
+                }
+                \Response::redirect('playlists/index');
             } else {
+                // Ajaxリクエストの場合はJSONでエラーメッセージを返す
+                if (\Input::is_ajax() || \Input::json('email')) {
+                    return \Response::forge(json_encode(array(
+                        'success' => false, 
+                        'error' => 'メールアドレスかパスワードが間違っています。'
+                    )), 401, array('Content-Type' => 'application/json'));
+                }
                 $data['error'] = 'メールアドレスかパスワードが間違っています。';
             }
         }
 
-        return View::forge('auth/login', isset($data) ? $data : array());
+        return \View::forge('auth/login', isset($data) ? $data : array());
     }
 
     // ログアウト処理

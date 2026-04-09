@@ -56,12 +56,14 @@
                     <h2 class="text-2xl font-bold text-foreground mb-2">Welcome back</h2>
                 </div>
 
-                <form action="/auth/login" method="POST" class="space-y-5">
+                <div data-bind="visible: loginError, text: loginError" style="display: none;" class="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm font-bold text-center"></div>
+
+                <form data-bind="submit: handleLogin" class="space-y-5">
                     <div>
                         <label class="block text-sm font-bold mb-2 text-foreground">Email<span class="text-red-500 ml-1">*</span></label>
                         <div class="relative">
                             <i data-lucide="mail" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></i>
-                            <input type="email" name="email" placeholder="you@example.com" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground">
+                            <input type="email" data-bind="value: loginEmail" placeholder="you@example.com" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground">
                         </div>
                     </div>
 
@@ -69,12 +71,12 @@
                         <label class="block text-sm font-bold mb-2 text-foreground">Password<span class="text-red-500 ml-1">*</span></label>
                         <div class="relative">
                             <i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></i>
-                            <input type="password" name="password" placeholder="Enter your password" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground">
+                            <input type="password" data-bind="value: loginPassword" placeholder="Enter your password" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground">
                         </div>
                     </div>
 
-                    <button type="submit" class="w-full py-4 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all">
-                        Log In
+                    <button type="submit" data-bind="disable: isLoggingIn" class="w-full py-4 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50">
+                        <span data-bind="text: isLoggingIn() ? 'Logging in...' : 'Log In'"></span>
                     </button>
                 </form>
 
@@ -149,10 +151,49 @@
                 self.isLoginModalOpen = ko.observable(false);
                 self.isSignUpModalOpen = ko.observable(false);
 
+                // ▼ 追加: ログインフォーム用のデータ管理
+                self.loginEmail = ko.observable("");
+                self.loginPassword = ko.observable("");
+                self.loginError = ko.observable("");
+                self.isLoggingIn = ko.observable(false);
+
+                // ▼ 追加: ログイン処理 (Ajax)
+                self.handleLogin = function() {
+                    self.loginError(""); // エラーをリセット
+                    self.isLoggingIn(true);
+
+                    fetch('/auth/login', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest' // Ajaxリクエストであることを明示
+                        },
+                        body: JSON.stringify({
+                            email: self.loginEmail(),
+                            password: self.loginPassword()
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // 成功時はプレイリスト一覧へ移動
+                            window.location.href = '/playlists/index';
+                        } else {
+                            // 失敗時はモーダル内にエラーを表示
+                            self.isLoggingIn(false);
+                            self.loginError(data.error || 'ログインに失敗しました。');
+                        }
+                    })
+                    .catch(error => {
+                        self.isLoggingIn(false);
+                        self.loginError('通信エラーが発生しました。');
+                    });
+                };
+
                 self.openLoginModal = function() {
                     self.isSignUpModalOpen(false);
                     self.isLoginModalOpen(true);
-                    document.body.style.overflow = "hidden"; // スクロール防止
+                    document.body.style.overflow = "hidden";
                 };
 
                 self.openSignUpModal = function() {
