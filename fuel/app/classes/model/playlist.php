@@ -17,6 +17,11 @@ class Model_Playlist extends \Model
 
     public static function update($id, $user_id, $update_data)
     {
+        $playlist = \DB::select('user_id')->from('playlists')->where('id', $id)->execute()->current();
+        if (!$playlist || $playlist['user_id'] != $user_id) {
+            throw new \Exception('このプレイリストを編集する権限がありません', 403);
+        }
+
         $update_data['updated_at'] = date('Y-m-d H:i:s');
         return \DB::update('playlists')
             ->set($update_data)
@@ -27,6 +32,11 @@ class Model_Playlist extends \Model
 
     public static function delete($id, $user_id)
     {
+        $playlist = \DB::select('user_id')->from('playlists')->where('id', $id)->execute()->current();
+        if (!$playlist || $playlist['user_id'] != $user_id) {
+            throw new \Exception('このプレイリストを削除する権限がありません', 403);
+        }
+
         // 中間テーブルの削除
         \DB::delete('playlist_tracks')->where('playlist_id', $id)->execute();
         // プレイリスト本体の削除
@@ -46,7 +56,7 @@ class Model_Playlist extends \Model
         // 権限チェック
         $playlist = \DB::select('user_id')->from('playlists')->where('id', $playlist_id)->execute()->current();
         if (!$playlist || $playlist['user_id'] != $user_id) {
-            throw new \Exception('Unauthorized', 403);
+            throw new \Exception('このプレイリストを編集する権限がありません', 403);
         }
 
         foreach ($track_ids as $index => $pt_id) {

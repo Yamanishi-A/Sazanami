@@ -65,7 +65,7 @@
             </p>
             <div class="flex items-center justify-center gap-4 pt-6">
                 <?php if ($is_logged_in): ?>
-                    <a href="/playlists/discover">
+                    <a href="/playlists">
                         <button class="inline-flex items-center gap-2 px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-all text-lg font-bold">
                             <i data-lucide="compass" class="w-5 h-5"></i>
                             <span>Explore Playlists</span>
@@ -103,9 +103,9 @@
 
 <script>
     function LandingPageViewModel() {
-        var self = this;
+        let self = this;
 
-        var dbTrending = <?php echo isset($trending_playlists) ? json_encode($trending_playlists) : '[]'; ?>;
+        let dbTrending = <?php echo isset($trending_playlists) ? json_encode($trending_playlists) : '[]'; ?>;
 
         self.trendingPlaylists = ko.observableArray(dbTrending);
     }

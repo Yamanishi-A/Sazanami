@@ -76,13 +76,13 @@
         </p>
 
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a href="/">
+            <a href="/users">
                 <button class="inline-flex items-center justify-center gap-2 px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-full shadow-lg hover:shadow-xl transition-all w-full sm:w-auto">
                     <i data-lucide="home" class="w-5 h-5"></i>
                     <span>Back to Home</span>
                 </button>
             </a>
-            <a href="/playlists/discover">
+            <a href="/playlists">
                 <button class="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white hover:bg-secondary/50 text-primary font-bold border-2 border-primary/20 rounded-full shadow-md hover:shadow-lg transition-all w-full sm:w-auto">
                     <i data-lucide="compass" class="w-5 h-5"></i>
                     <span>Explore Playlists</span>

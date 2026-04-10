@@ -84,9 +84,9 @@
 
 <script>
     function UserPageViewModel() {
-        var self = this;
+        let self = this;
         // Controllerから渡されたプレイリストデータをObservableArrayに格納
-        var initialPlaylists = <?php echo json_encode($playlists ?? array()); ?>;
+        let initialPlaylists = <?php echo json_encode($playlists ?? array()); ?>;
         self.userPlaylists = ko.observableArray(initialPlaylists);
     }
     

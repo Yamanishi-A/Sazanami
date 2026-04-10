@@ -1,8 +1,13 @@
 <?php
 class Model_Track extends \Model
 {
-    public static function add_to_playlist($playlist_id, $url)
+    public static function add_to_playlist($playlist_id, $user_id, $url)
     {
+        $playlist = \DB::select('user_id')->from('playlists')->where('id', $playlist_id)->execute()->current();
+        if (!$playlist || $playlist['user_id'] != $user_id) {
+            throw new \Exception('このプレイリストを編集する権限がありません', 403);
+        }
+        
         $platform = self::detect_platform($url);
         $metadata = self::fetch_metadata($url, $platform);
         $title = $metadata['title'];
@@ -43,22 +48,25 @@ class Model_Track extends \Model
         );
     }
 
-    public static function delete_from_playlist($pt_id)
+    public static function delete_from_playlist($pt_id, $user_id)
     {
         $pt_record = \DB::select('playlist_id')->from('playlist_tracks')->where('id', $pt_id)->execute()->current();
-        if ($pt_record) {
-            $playlist_id = $pt_record['playlist_id'];
-            \DB::delete('playlist_tracks')->where('id', $pt_id)->execute();
-            \Model_Playlist::update_updated_at($playlist_id);
-            return true;
+        if (!$pt_record) return false;
+
+        $playlist_id = $pt_record['playlist_id'];
+        $playlist = \DB::select('user_id')->from('playlists')->where('id', $playlist_id)->execute()->current();
+        if (!$playlist || $playlist['user_id'] != $user_id) {
+            throw new \Exception('この楽曲を削除する権限がありません', 403);
         }
-        return false;
+
+        \DB::delete('playlist_tracks')->where('id', $pt_id)->execute();
+        \Model_Playlist::update_updated_at($playlist_id);
+        return true;
     }
 
     private static function detect_platform($url)
     {
         if (strpos($url, 'youtu') !== false) return 'youtube';
-        if (strpos($url, 'spotify') !== false) return 'spotify';
         if (strpos($url, 'nicovideo') !== false || strpos($url, 'nico.ms') !== false) return 'niconico';
         return 'other';
     }
@@ -70,8 +78,6 @@ class Model_Track extends \Model
         $oembed_url = '';
         if ($platform === 'youtube') {
             $oembed_url = 'https://www.youtube.com/oembed?url=' . urlencode($url) . '&format=json';
-        } elseif ($platform === 'spotify') {
-            $oembed_url = 'https://open.spotify.com/oembed?url=' . urlencode($url);
         }
 
         if ($oembed_url) {

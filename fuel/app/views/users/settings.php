@@ -167,7 +167,7 @@
     lucide.createIcons();
 
     function UserSettingsViewModel() {
-        var self = this;
+        let self = this;
 
         // DB情報の読み込み
         self.username = ko.observable("<?php echo htmlspecialchars($user['username'] ?? '', ENT_QUOTES, 'UTF-8'); ?>");
@@ -201,7 +201,7 @@
 
         // ▼ Canvasによる画像圧縮アップロード処理
         self.handleImageUpload = function(data, event) {
-            var file = event.target.files[0];
+            let file = event.target.files[0];
             if (!file) return;
             
             if (!file.type.match('image.*')) {
@@ -209,31 +209,31 @@
                 return;
             }
 
-            var reader = new FileReader();
+            let reader = new FileReader();
             reader.onload = function(e) {
-                var img = new Image();
+                let img = new Image();
                 img.onload = function() {
                     // プロフィールアイコン用に正方形（最大400x400）にリサイズ
-                    var MAX_SIZE = 400;
-                    var canvas = document.createElement('canvas');
+                    let MAX_SIZE = 400;
+                    let canvas = document.createElement('canvas');
                     canvas.width = MAX_SIZE;
                     canvas.height = MAX_SIZE;
-                    var ctx = canvas.getContext('2d');
+                    let ctx = canvas.getContext('2d');
                     
                     // アスペクト比を保ちながら中央でクロップする計算
-                    var scale = Math.max(MAX_SIZE / img.width, MAX_SIZE / img.height);
-                    var x = (MAX_SIZE / scale - img.width) / 2;
-                    var y = (MAX_SIZE / scale - img.height) / 2;
+                    let scale = Math.max(MAX_SIZE / img.width, MAX_SIZE / img.height);
+                    let x = (MAX_SIZE / scale - img.width) / 2;
+                    let y = (MAX_SIZE / scale - img.height) / 2;
                     
                     ctx.drawImage(img, x, y, img.width, img.height, 0, 0, MAX_SIZE, MAX_SIZE);
                     
-                    var dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    let dataUrl = canvas.toDataURL('image/jpeg', 0.8);
                     self.iconPreview(dataUrl);
                     
                     // Blobへ変換
-                    var bin = atob(dataUrl.split(',')[1]);
-                    var buffer = new Uint8Array(bin.length);
-                    for (var i = 0; i < bin.length; i++) buffer[i] = bin.charCodeAt(i);
+                    let bin = atob(dataUrl.split(',')[1]);
+                    let buffer = new Uint8Array(bin.length);
+                    for (let i = 0; i < bin.length; i++) buffer[i] = bin.charCodeAt(i);
                     self.iconFile(new Blob([buffer.buffer], {type: 'image/jpeg'}));
                     self.removeIconFlag(false);
                     
@@ -248,7 +248,7 @@
             self.iconPreview(null);
             self.iconFile(null);
             self.removeIconFlag(true);
-            var fileInput = document.getElementById('icon-upload');
+            let fileInput = document.getElementById('icon-upload');
             if (fileInput) fileInput.value = ""; 
         };
 
@@ -261,7 +261,7 @@
 
             self.isSavingProfile(true);
             
-            var formData = new FormData();
+            let formData = new FormData();
             formData.append('username', self.username());
             formData.append('bio', self.profileBio() || '');
             
@@ -324,7 +324,7 @@
 
         // ▼ アカウント削除処理 (DB連携)
         self.handleDeleteAccount = function() {
-            var confirmed = confirm("Are you sure you want to delete your account? This action cannot be undone and all your playlists will be lost.");
+            let confirmed = confirm("Are you sure you want to delete your account? This action cannot be undone and all your playlists will be lost.");
             
             if (confirmed) {
                 fetch('/api/delete_account', {

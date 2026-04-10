@@ -72,11 +72,7 @@
                     </button>
                 </div>
 
-                <div class="overflow-hidden bg-black transition-all duration-300"
-                     data-bind="css: {
-                         'relative w-[300px] h-20 rounded-lg flex-shrink-0': currentTrack() && currentTrack().platform === 'spotify',
-                         'fixed bottom-24 right-6 w-64 sm:w-80 aspect-video shadow-2xl rounded-xl z-[60] border border-gray-700': currentTrack() && currentTrack().platform !== 'spotify'
-                     }">
+                <div class="overflow-hidden bg-black transition-all duration-300 fixed bottom-24 right-6 w-64 sm:w-80 aspect-video shadow-2xl rounded-xl z-[60] border border-gray-700">
                     
                     <iframe data-bind="visible: embedUrl(), attr: { src: embedUrl, referrerpolicy: (currentTrack() && currentTrack().platform === 'niconico') ? 'no-referrer' : null }" class="w-full h-full absolute inset-0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                     
@@ -105,8 +101,8 @@
                         <?php echo htmlspecialchars($playlist['title'], ENT_QUOTES, 'UTF-8'); ?>
                     </h2>
                     
-                    <?php if (isset($creator) && !$is_owner): ?>
-                    <a href="/playlists/user/<?php echo $creator['id']; ?>" class="inline-flex items-center justify-center md:justify-start gap-3 mb-5 hover:opacity-80 transition-opacity cursor-pointer">
+                    <?php if (isset($creator)): ?>
+                    <a href="/users/<?php echo $creator['id']; ?>" class="inline-flex items-center justify-center md:justify-start gap-3 mb-5 hover:opacity-80 transition-opacity cursor-pointer">
                         <div class="w-8 h-8 rounded-full bg-gradient-to-br from-secondary to-accent flex items-center justify-center border border-border shadow-sm overflow-hidden">
                             <?php if (!empty($creator['icon'])): ?>
                                 <img src="<?php echo htmlspecialchars($creator['icon'], ENT_QUOTES, 'UTF-8'); ?>" alt="Creator Icon" class="w-full h-full object-cover">
@@ -148,7 +144,7 @@
                 <input 
                     type="text" 
                     data-bind="value: newTrackUrl"
-                    placeholder="YouTube, Spotify, Niconico の URL をペースト..." 
+                    placeholder="YouTube, Niconico の URL をペースト..." 
                     class="flex-1 px-4 py-3 bg-slate-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                     required
                 >
@@ -227,8 +223,8 @@
     // ▼ 修正: SortableJS用のカスタムバインディング（完全動作版） ▼
     ko.bindingHandlers.sortableList = {
         init: function(element, valueAccessor, allBindings, viewModel, bindingContext) {
-            var list = valueAccessor();
-            var originalNextSibling; // ドラッグ開始時の「正しい位置」を記憶する変数
+            let list = valueAccessor();
+            let originalNextSibling; // ドラッグ開始時の「正しい位置」を記憶する変数
 
             Sortable.create(element, {
                 animation: 150,
@@ -244,7 +240,7 @@
                 onEnd: function(evt) {
                     if (evt.oldIndex === evt.newIndex) return;
 
-                    var itemEl = evt.item;
+                    let itemEl = evt.item;
                     
                     // ▼ 修正: Sortableが移動させたDOMを、記憶しておいた「全く同じ場所」に寸分狂わず戻す
                     // （これによりKnockoutのトラッキングが壊れるのを防ぎます）
@@ -256,8 +252,8 @@
 
                     // ▼ DOMが完全に元通りになった後で、Knockoutの配列だけを書き換える
                     // これにより、画面の再描画はKnockout自身が安全に行います
-                    var underlyingArray = list();
-                    var item = underlyingArray[evt.oldIndex];
+                    let underlyingArray = list();
+                    let item = underlyingArray[evt.oldIndex];
                     
                     underlyingArray.splice(evt.oldIndex, 1);
                     underlyingArray.splice(evt.newIndex, 0, item);
@@ -275,11 +271,11 @@
     };
 
     function PlaylistDetailViewModel() {
-        var self = this;
+        let self = this;
 
         // プレイリストのIDと初期楽曲データ
         self.playlistId = <?php echo $playlist['id']; ?>;
-        var initialTracks = <?php echo json_encode($tracks ?? array()); ?>;
+        let initialTracks = <?php echo json_encode($tracks ?? array()); ?>;
         self.tracks = ko.observableArray(initialTracks);
 
         self.newTrackUrl = ko.observable("");
@@ -290,7 +286,7 @@
         self.currentTrack = ko.observable(null);
 
         self.currentIndex = ko.computed(function() {
-            var current = self.currentTrack();
+            let current = self.currentTrack();
             if (!current) return -1;
             return self.tracks().indexOf(current);
         });
@@ -316,33 +312,24 @@
         };
         
         self.embedUrl = ko.computed(function() {
-            var track = self.currentTrack();
+            let track = self.currentTrack();
             if (!track || !track.url) return null;
 
-            var url = track.url;
-            var platform = track.platform;
+            let url = track.url;
+            let platform = track.platform;
 
             // 1. YouTube の場合
             if (platform === 'youtube' || url.indexOf('youtu') !== -1) {
-                var ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})/);
+                let ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})/);
                 if (ytMatch && ytMatch[1]) {
                     // autoplay=1 を付けて自動再生させる
                     return "https://www.youtube.com/embed/" + ytMatch[1] + "?autoplay=1";
                 }
             }
             
-            // 2. Spotify の場合
-            else if (platform === 'spotify' || url.indexOf('spotify') !== -1) {
-                // 通常のURL (https://open.spotify.com/track/xxxx) からIDを抽出
-                var spMatch = url.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
-                if (spMatch && spMatch[1]) {
-                    return "https://open.spotify.com/embed/track/" + spMatch[1] + "?utm_source=generator";
-                }
-            }
-            
-            // 3. ニコニコ動画 の場合
+            // 2. ニコニコ動画 の場合
             else if (platform === 'niconico' || url.indexOf('nico') !== -1) {
-                var nicoMatch = url.match(/(?:nicovideo\.jp\/watch\/|nico\.ms\/)(sm[0-9]+|nm[0-9]+|so[0-9]+|[a-zA-Z0-9]+)/);
+                let nicoMatch = url.match(/(?:nicovideo\.jp\/watch\/|nico\.ms\/)(sm[0-9]+|nm[0-9]+|so[0-9]+|[a-zA-Z0-9]+)/);
                 if (nicoMatch && nicoMatch[1]) {
                     return "https://embed.nicovideo.jp/watch/" + nicoMatch[1];
                 }
@@ -371,7 +358,7 @@
 
         // 楽曲の追加 (Ajax POST)
         self.handleAddTrack = function() {
-            var url = self.newTrackUrl();
+            let url = self.newTrackUrl();
             if (!url) return;
 
             self.errorMessage("");
@@ -429,7 +416,7 @@
 
         self.handleShare = function() {
             // 現在開いているページのURLを取得
-            var url = window.location.href;
+            let url = window.location.href;
             
             // クリップボードAPIを使用してコピー
             if (navigator.clipboard && window.isSecureContext) {
@@ -447,7 +434,7 @@
 
         self.saveTrackOrder = function() {
             // ▼ 修正: track.id ではなく、中間テーブルの track.pt_id を取得する
-            var orderedIds = self.tracks().map(function(track) {
+            let orderedIds = self.tracks().map(function(track) {
                 return track.pt_id; 
             });
 

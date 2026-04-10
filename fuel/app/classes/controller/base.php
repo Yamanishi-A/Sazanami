@@ -22,11 +22,9 @@ class Controller_Base extends \Controller
             $controller = \Request::active()->controller;
             $action = \Request::active()->action;
             
-            $is_welcome = ($controller === 'Controller_Welcome');
-            $is_auth = ($controller === 'Controller_Auth');
-            $is_public_playlist = ($controller === 'Controller_Playlists' && in_array($action, ['discover', 'view', 'user']));
+            $is_users = ($controller === 'Controller_Users');
 
-            if (!$is_welcome && !$is_auth && !$is_public_playlist) {
+            if ($controller === 'Controller_Users' && in_array($action, ['index', 'settings'])) {
                 return \Response::redirect('/');
             }
         }
