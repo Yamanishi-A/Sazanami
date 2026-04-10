@@ -174,4 +174,54 @@ class Model_Playlist extends \Model
 
         return $trending_playlists;
     }
+
+    // ==========================================
+    // ▼ 追加: 特定ユーザーの公開プレイリストを取得する（リッチ形式）
+    // ==========================================
+    public static function get_rich_user_playlists($user_id)
+    {
+        $query = \DB::select(
+            'p.id', 'p.title', 'p.cover_image',
+            array('u.username', 'creatorName'),
+            array('u.icon', 'creatorAvatar')
+        )
+        ->from(array('playlists', 'p'))
+        ->join(array('users', 'u'), 'INNER')->on('p.user_id', '=', 'u.id')
+        ->where('p.user_id', $user_id)
+        ->order_by('p.updated_at', 'desc')
+        ->execute()
+        ->as_array();
+
+        $rich_playlists = array();
+
+        foreach ($query as $playlist) {
+            $track_count = \DB::select(\DB::expr('COUNT(*) as count'))
+                ->from('playlist_tracks')
+                ->where('playlist_id', $playlist['id'])
+                ->execute()
+                ->get('count', 0);
+
+            $platforms_query = \DB::select('t.platform')
+                ->from(array('playlist_tracks', 'pt'))
+                ->join(array('tracks', 't'), 'INNER')->on('pt.track_id', '=', 't.id')
+                ->where('pt.playlist_id', $playlist['id'])
+                ->group_by('t.platform')
+                ->execute()
+                ->as_array();
+
+            $platforms = array_column($platforms_query, 'platform');
+
+            $rich_playlists[] = array(
+                'id'            => $playlist['id'],
+                'title'         => $playlist['title'],
+                'coverImage'    => $playlist['cover_image'],
+                'creatorName'   => $playlist['creatorName'],
+                'creatorAvatar' => $playlist['creatorAvatar'],
+                'trackCount'    => (int)$track_count,
+                'platforms'     => $platforms
+            );
+        }
+
+        return $rich_playlists;
+    }
 }

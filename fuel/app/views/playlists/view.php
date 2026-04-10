@@ -104,9 +104,25 @@
                     <h2 class="text-4xl font-bold text-foreground mb-4">
                         <?php echo htmlspecialchars($playlist['title'], ENT_QUOTES, 'UTF-8'); ?>
                     </h2>
+                    
+                    <?php if (isset($creator) && !$is_owner): ?>
+                    <a href="/playlists/user/<?php echo $creator['id']; ?>" class="inline-flex items-center justify-center md:justify-start gap-3 mb-5 hover:opacity-80 transition-opacity cursor-pointer">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-secondary to-accent flex items-center justify-center border border-border shadow-sm overflow-hidden">
+                            <?php if (!empty($creator['icon'])): ?>
+                                <img src="<?php echo htmlspecialchars($creator['icon'], ENT_QUOTES, 'UTF-8'); ?>" alt="Creator Icon" class="w-full h-full object-cover">
+                            <?php else: ?>
+                                <i data-lucide="user" class="w-4 h-4 text-primary"></i>
+                            <?php endif; ?>
+                        </div>
+                        <span class="text-sm font-bold text-muted-foreground">
+                            Created by <span class="text-foreground hover:underline"><?php echo htmlspecialchars($creator['username'], ENT_QUOTES, 'UTF-8'); ?></span>
+                        </span>
+                    </a>
+                    <?php endif; ?>
                     <p class="text-lg text-muted-foreground mb-6">
                         <?php echo htmlspecialchars($playlist['description'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
                     </p>
+                    
                     <button class="inline-flex items-center gap-2 px-8 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-md transition-all font-bold" data-bind="click: handlePlayFirst">
                         <i data-lucide="play" class="w-5 h-5 fill-current"></i>
                         <span>Play</span>

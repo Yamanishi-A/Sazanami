@@ -24,7 +24,7 @@ class Controller_Base extends \Controller
             
             $is_welcome = ($controller === 'Controller_Welcome');
             $is_auth = ($controller === 'Controller_Auth');
-            $is_public_playlist = ($controller === 'Controller_Playlists' && in_array($action, ['discover', 'view']));
+            $is_public_playlist = ($controller === 'Controller_Playlists' && in_array($action, ['discover', 'view', 'user']));
 
             if (!$is_welcome && !$is_auth && !$is_public_playlist) {
                 return \Response::redirect('/');

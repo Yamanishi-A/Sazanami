@@ -46,11 +46,19 @@ class Controller_Playlists extends \Controller_Base
         $tracks = \Model_Track::get_tracks_by_playlist($id);
         $user = \Model_User::get_user_by_id($user_id);
 
+        // ==========================================
+        // ▼ 追加: プレイリストの「作成者」の情報を取得
+        // ==========================================
+        $creator = \Model_User::get_user_by_id($playlist['user_id']);
+
         $view = \View::forge('playlists/view');
         $view->set('playlist', $playlist);
         $view->set('tracks', $tracks);
         $view->set('user', $user);
         $view->set('is_owner', $is_owner);
+        
+        // ▼ 追加: 取得した作成者データをビューに渡す
+        $view->set('creator', $creator);
 
         return \Response::forge($view);
     }
@@ -88,5 +96,30 @@ class Controller_Playlists extends \Controller_Base
         // 複雑な集計ロジックはすべてModelが担当
         $data['playlists'] = \Model_Playlist::get_discover_playlists();
         return \Response::forge(\View::forge('playlists/discover', $data));
+    }
+
+    // ==========================================
+    // ▼ 追加: ユーザーページ (特定の人が作ったプレイリスト一覧)
+    // ==========================================
+    public function action_user($target_user_id = null)
+    {
+        if ($target_user_id === null) {
+            return \Response::redirect('playlists/discover');
+        }
+
+        // ターゲットとなるユーザーの情報を取得
+        $target_user = \Model_User::get_user_by_id($target_user_id);
+        if (!$target_user) {
+            return \Response::redirect('playlists/discover'); // 存在しないユーザーなら戻す
+        }
+
+        // ヘッダー用のログインユーザー情報と、表示対象のユーザー情報を渡す
+        $data['user'] = $this->current_user;
+        $data['target_user'] = $target_user;
+
+        // 対象ユーザーのプレイリストを取得
+        $data['playlists'] = \Model_Playlist::get_rich_user_playlists($target_user_id);
+
+        return \Response::forge(\View::forge('playlists/user', $data));
     }
 }
