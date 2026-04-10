@@ -1,57 +1,25 @@
 <?php
-/**
- * Fuel is a fast, lightweight, community driven PHP5 framework.
- *
- * @package    Fuel
- * @version    1.8
- * @author     Fuel Development Team
- * @license    MIT License
- * @copyright  2010 - 2016 Fuel Development Team
- * @link       http://fuelphp.com
- */
-
-/**
- * The Welcome Controller.
- *
- * A basic controller example.  Has examples of how to set the
- * response body and status.
- *
- * @package  app
- * @extends  Controller
- */
-class Controller_Welcome extends Controller
+class Controller_Welcome extends \Controller_Base
 {
-	/**
-	 * The basic welcome message
-	 *
-	 * @access  public
-	 * @return  Response
-	 */
-	public function action_index()
-	{
-		return Response::forge(View::forge('welcome/index'));
-	}
+    public function action_index()
+    {
+        $data['user'] = $this->current_user;
 
-	/**
-	 * A typical "Hello, Bob!" type example.  This uses a Presenter to
-	 * show how to use them.
-	 *
-	 * @access  public
-	 * @return  Response
-	 */
-	public function action_hello()
-	{
-		return Response::forge(Presenter::forge('welcome/hello'));
-	}
+        \Config::load('sazanami', true);
+        $trending_limit = \Config::get('sazanami.display.trending_limit', 4);
 
-	/**
-	 * The 404 action for the application.
-	 *
-	 * @access  public
-	 * @return  Response
-	 */
-	public function action_404()
-	{
-		return Response::forge(Presenter::forge('welcome/404'), 404);
-	}
+        $data['trending_playlists'] = \Model_Playlist::get_trending_playlists($trending_limit);
+
+        return \Response::forge(\View::forge('welcome/index', $data));
+    }
+    
+    public function action_hello()
+    {
+        return \Response::forge(\Presenter::forge('welcome/hello'));
+    }
+
+    public function action_404()
+    {
+        return \Response::forge(\Presenter::forge('welcome/404'), 404);
+    }
 }

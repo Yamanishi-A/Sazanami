@@ -1,57 +1,85 @@
 <?php
 
-class Controller_Auth extends Controller_Base
+class Controller_Auth extends \Controller_Base
 {
     // サインアップ処理
-    public function action_signup()
+    public function post_signup()
     {
-        if (Input::method() == 'POST') {
-            $username = Input::post('username');
-            $email = Input::post('email');
-            $password = Input::post('password');
+        $username = \Input::json('username') ?: \Input::post('username');
+        $email = \Input::json('email') ?: \Input::post('email');
+        $password = \Input::json('password') ?: \Input::post('password');
 
-            $password_hash = password_hash($password, PASSWORD_DEFAULT);
-
-            list($insert_id, $rows_affected) = DB::insert('users')->set(array(
-                'username'      => $username,
-                'email'         => $email,
-                'password_hash' => $password_hash,
-                'created_at'    => date('Y-m-d H:i:s'), // To DATETIME
-            ))->execute();
-
-            if ($insert_id) {
-                Session::set('user_id', $insert_id);
-                Response::redirect('playlists/index');
-            }
+        $redirect_to = \Input::json('redirect_to', '/users');
+        if ($redirect_to === '/') {
+            $redirect_to = '/users';
         }
 
-        return View::forge('auth/signup');
+        try {
+            $insert_id = \Model_User::create_user($username, $email, $password);
+
+            if ($insert_id) {
+                \Session::set('user_id', $insert_id);
+                
+                if (\Input::is_ajax() || \Input::json('email')) {
+                    return \Response::forge(json_encode(array(
+                        'success' => true,
+                        'redirect_to' => $redirect_to
+                    )), 200, array('Content-Type' => 'application/json'));
+                }
+                
+                \Response::redirect($redirect_to);
+            }
+        } catch (\Exception $e) {
+            if (\Input::is_ajax() || \Input::json('email')) {
+                return \Response::forge(json_encode(array(
+                    'success' => false, 
+                    'error' => 'このメールアドレスは既に登録されているか、エラーが発生しました。'
+                )), 401, array('Content-Type' => 'application/json'));
+            }
+            $data['error'] = 'このメールアドレスは既に登録されているか、エラーが発生しました。';
+        }
     }
 
     // ログイン処理
-    public function action_login()
+    public function post_login()
     {
-        if (Input::method() == 'POST') {
-            $email = Input::post('email');
-            $password = Input::post('password');
-
-            $user = DB::select()->from('users')->where('email', $email)->execute()->current();
-
-            if ($user && password_verify($password, $user['password_hash'])) {
-                Session::set('user_id', $user['id']);
-                Response::redirect('playlists/index');
-            } else {
-                $data['error'] = 'メールアドレスかパスワードが間違っています。';
-            }
+        $email = \Input::json('email') ?: \Input::post('email');
+        $password = \Input::json('password') ?: \Input::post('password');
+        
+        $redirect_to = \Input::json('redirect_to', '/users');
+        if ($redirect_to === '/') {
+            $redirect_to = '/users';
         }
 
-        return View::forge('auth/login', isset($data) ? $data : array());
+        $user = \Model_User::authenticate($email, $password);
+
+        if ($user) {
+            // 認証成功
+            \Session::set('user_id', $user['id']);
+            
+            if (\Input::is_ajax() || \Input::json('email')) {
+                return \Response::forge(json_encode(array(
+                    'success' => true,
+                    'redirect_to' => $redirect_to
+                )), 200, array('Content-Type' => 'application/json'));
+            }
+            \Response::redirect($redirect_to);
+        } else {
+            // 認証失敗
+            if (\Input::is_ajax() || \Input::json('email')) {
+                return \Response::forge(json_encode(array(
+                    'success' => false, 
+                    'error' => 'メールアドレスかパスワードが間違っています。'
+                )), 401, array('Content-Type' => 'application/json'));
+            }
+            $data['error'] = 'メールアドレスかパスワードが間違っています。';
+        }
     }
 
     // ログアウト処理
-    public function action_logout()
+    public function post_logout()
     {
-        Session::destroy();
-        Response::redirect('auth/login');
+        \Session::destroy();
+        \Response::redirect('/');
     }
 }

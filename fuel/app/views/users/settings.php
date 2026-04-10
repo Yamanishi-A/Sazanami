@@ -167,14 +167,14 @@
     lucide.createIcons();
 
     function UserSettingsViewModel() {
-        var self = this;
+        let self = this;
 
         // DB情報の読み込み
         self.username = ko.observable("<?php echo htmlspecialchars($user['username'] ?? '', ENT_QUOTES, 'UTF-8'); ?>");
         self.profileBio = ko.observable("<?php echo htmlspecialchars($user['bio'] ?? '', ENT_QUOTES, 'UTF-8'); ?>");
         self.email = ko.observable("<?php echo htmlspecialchars($user['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>");
         
-        // アイコン関連 (avatar_image ではなく icon を使用)
+        // アイコン関連
         self.iconPreview = ko.observable("<?php echo isset($user['icon']) ? $user['icon'] : ''; ?>");
         self.iconFile = ko.observable(null);
         self.removeIconFlag = ko.observable(false);
@@ -199,9 +199,9 @@
             setTimeout(function() { self.alertMessage(""); }, 5000);
         };
 
-        // ▼ Canvasによる画像圧縮アップロード処理
+        // Canvasによる画像圧縮アップロード処理
         self.handleImageUpload = function(data, event) {
-            var file = event.target.files[0];
+            let file = event.target.files[0];
             if (!file) return;
             
             if (!file.type.match('image.*')) {
@@ -209,31 +209,31 @@
                 return;
             }
 
-            var reader = new FileReader();
+            let reader = new FileReader();
             reader.onload = function(e) {
-                var img = new Image();
+                let img = new Image();
                 img.onload = function() {
                     // プロフィールアイコン用に正方形（最大400x400）にリサイズ
-                    var MAX_SIZE = 400;
-                    var canvas = document.createElement('canvas');
+                    let MAX_SIZE = 400;
+                    let canvas = document.createElement('canvas');
                     canvas.width = MAX_SIZE;
                     canvas.height = MAX_SIZE;
-                    var ctx = canvas.getContext('2d');
+                    let ctx = canvas.getContext('2d');
                     
                     // アスペクト比を保ちながら中央でクロップする計算
-                    var scale = Math.max(MAX_SIZE / img.width, MAX_SIZE / img.height);
-                    var x = (MAX_SIZE / scale - img.width) / 2;
-                    var y = (MAX_SIZE / scale - img.height) / 2;
+                    let scale = Math.max(MAX_SIZE / img.width, MAX_SIZE / img.height);
+                    let x = (MAX_SIZE / scale - img.width) / 2;
+                    let y = (MAX_SIZE / scale - img.height) / 2;
                     
                     ctx.drawImage(img, x, y, img.width, img.height, 0, 0, MAX_SIZE, MAX_SIZE);
                     
-                    var dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    let dataUrl = canvas.toDataURL('image/jpeg', 0.8);
                     self.iconPreview(dataUrl);
                     
                     // Blobへ変換
-                    var bin = atob(dataUrl.split(',')[1]);
-                    var buffer = new Uint8Array(bin.length);
-                    for (var i = 0; i < bin.length; i++) buffer[i] = bin.charCodeAt(i);
+                    let bin = atob(dataUrl.split(',')[1]);
+                    let buffer = new Uint8Array(bin.length);
+                    for (let i = 0; i < bin.length; i++) buffer[i] = bin.charCodeAt(i);
                     self.iconFile(new Blob([buffer.buffer], {type: 'image/jpeg'}));
                     self.removeIconFlag(false);
                     
@@ -248,11 +248,11 @@
             self.iconPreview(null);
             self.iconFile(null);
             self.removeIconFlag(true);
-            var fileInput = document.getElementById('icon-upload');
+            let fileInput = document.getElementById('icon-upload');
             if (fileInput) fileInput.value = ""; 
         };
 
-        // ▼ プロフィール保存処理 (DB連携)
+        // プロフィール保存処理
         self.handleSaveChanges = function() {
             if (!self.username().trim()) {
                 self.showAlert("Username is required.", "error");
@@ -261,7 +261,7 @@
 
             self.isSavingProfile(true);
             
-            var formData = new FormData();
+            let formData = new FormData();
             formData.append('username', self.username());
             formData.append('bio', self.profileBio() || '');
             
@@ -278,7 +278,6 @@
             .then(data => {
                 if (data.success) {
                     self.showAlert("Profile changes saved successfully!", "success");
-                    // ヘッダーなどの反映のためにリロードしても良いですが、今回は表示変更のみ
                 } else {
                     self.showAlert("Error: " + (data.error || "Failed to update profile"), "error");
                 }
@@ -291,13 +290,8 @@
             });
         };
 
-        // ▼ パスワード変更処理 (DB連携)
+        // パスワード変更処理
         self.handlePasswordReset = function() {
-            if (!self.newPassword() || self.newPassword().length < 6) {
-                self.showAlert("Password must be at least 6 characters long.", "error");
-                return;
-            }
-
             self.isSavingPassword(true);
 
             fetch('/api/reset_password', {
@@ -309,7 +303,7 @@
             .then(data => {
                 if (data.success) {
                     self.showAlert("Password updated successfully!", "success");
-                    self.newPassword(""); // フィールドをクリア
+                    self.newPassword("");
                 } else {
                     self.showAlert("Error: " + (data.error || "Failed to update password"), "error");
                 }
@@ -322,9 +316,9 @@
             });
         };
 
-        // ▼ アカウント削除処理 (DB連携)
+        // アカウント削除処理
         self.handleDeleteAccount = function() {
-            var confirmed = confirm("Are you sure you want to delete your account? This action cannot be undone and all your playlists will be lost.");
+            let confirmed = confirm("Are you sure you want to delete your account? This action cannot be undone and all your playlists will be lost.");
             
             if (confirmed) {
                 fetch('/api/delete_account', {
@@ -334,7 +328,7 @@
                 .then(data => {
                     if (data.success) {
                         alert("Your account has been deleted.");
-                        window.location.href = '/'; // トップページへリダイレクト
+                        window.location.href = '/';
                     } else {
                         self.showAlert("Failed to delete account.", "error");
                     }

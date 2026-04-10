@@ -25,11 +25,12 @@
     </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.5.1/knockout-latest.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="bg-slate-50">
 
-<?php echo View::forge('shared/header', array('user' => isset($user) ? $user : null)); ?>
+<?php echo \View::forge('shared/header', array('user' => isset($user) ? $user : null)); ?>
 
 <div id="playlist-detail-page" class="min-h-screen relative overflow-hidden">
     <div class="fixed inset-0 -z-10 overflow-hidden">
@@ -51,8 +52,10 @@
             <div class="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
                 
                 <div class="flex items-center gap-4 flex-1 min-w-0" data-bind="with: currentTrack">
-                    <div class="w-12 h-12 rounded-md bg-gradient-to-br from-secondary to-accent flex items-center justify-center flex-shrink-0">
-                        <i data-lucide="music" class="w-6 h-6 text-primary"></i>
+                    <img data-bind="visible: $data.thumbnail_url, attr: { src: $data.thumbnail_url, alt: title }" class="w-12 h-12 rounded-md object-cover" style="display: none;" />
+                        
+                    <div data-bind="visible: !$data.thumbnail_url" class="w-12 h-12 rounded-md bg-gradient-to-br from-secondary to-accent flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="music" class="w-6 h-6 text-primary/40"></i>
                     </div>
                     <div class="min-w-0">
                         <h4 class="text-sm font-bold text-foreground truncate" data-bind="text: title"></h4>
@@ -60,34 +63,65 @@
                     </div>
                 </div>
 
-                <div class="w-full max-w-sm h-14 rounded-lg overflow-hidden bg-black flex-shrink-0">
-                    <iframe data-bind="attr: { src: embedUrl }" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                    <div class="w-full h-full flex items-center justify-center text-xs text-white">
+                <div class="flex items-center justify-center gap-2 px-2 sm:px-6">
+                    <button data-bind="click: playPrev, disable: !hasPrev()" class="p-2 text-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="前の曲へ">
+                        <i data-lucide="skip-back" class="w-6 h-6 fill-current"></i>
+                    </button>
+                    <button data-bind="click: playNext, disable: !hasNext()" class="p-2 text-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="次の曲へ">
+                        <i data-lucide="skip-forward" class="w-6 h-6 fill-current"></i>
+                    </button>
+                </div>
+
+                <div class="overflow-hidden bg-black transition-all duration-300 fixed bottom-24 right-6 w-64 sm:w-80 aspect-video shadow-2xl rounded-xl z-[60] border border-gray-700">
+                    
+                    <iframe data-bind="visible: embedUrl(), attr: { src: embedUrl, referrerpolicy: (currentTrack() && currentTrack().platform === 'niconico') ? 'no-referrer' : null }" class="w-full h-full absolute inset-0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    
+                    <div data-bind="visible: !embedUrl()" class="w-full h-full absolute inset-0 flex items-center justify-center text-xs text-white bg-black">
                         再生できないプラットフォームです
                     </div>
-                    </div>
+                </div>
 
-                <button data-bind="click: closePlayer" class="p-2 text-muted-foreground hover:text-foreground transition-colors">
-                    <i data-lucide="x" class="w-5 h-5"></i>
+                <button data-bind="click: closePlayer" class="p-2 flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors ml-auto">
+                    <i data-lucide="x" class="w-6 h-6"></i>
                 </button>
             </div>
         </div>
         
         <div class="bg-white/60 backdrop-blur-md rounded-3xl p-8 shadow-sm border border-border">
             <div class="flex flex-col md:flex-row items-center gap-8">
-                <div class="w-48 h-48 rounded-2xl bg-gradient-to-br from-secondary to-accent flex items-center justify-center shadow-md flex-shrink-0">
-                    <i data-lucide="music" class="w-20 h-20 text-primary/60"></i>
+                <div class="w-48 h-48 rounded-2xl bg-gradient-to-br from-secondary to-accent flex items-center justify-center shadow-md flex-shrink-0 overflow-hidden">
+                    <?php if (!empty($playlist['cover_image'])): ?>
+                        <img src="<?php echo htmlspecialchars($playlist['cover_image'], ENT_QUOTES, 'UTF-8'); ?>" alt="Cover Image" class=" w-full h-full object-cover">
+                    <?php else: ?>
+                        <i data-lucide="list-music" class="w-20 h-20 text-primary/60"></i>
+                    <?php endif; ?>
                 </div>
                 <div class="flex-1 text-center md:text-left">
                     <h2 class="text-4xl font-bold text-foreground mb-4">
                         <?php echo htmlspecialchars($playlist['title'], ENT_QUOTES, 'UTF-8'); ?>
                     </h2>
+                    
+                    <?php if (isset($creator)): ?>
+                    <a href="/users/<?php echo $creator['id']; ?>" class="inline-flex items-center justify-center md:justify-start gap-3 mb-5 hover:opacity-80 transition-opacity cursor-pointer">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-secondary to-accent flex items-center justify-center border border-border shadow-sm overflow-hidden">
+                            <?php if (!empty($creator['icon'])): ?>
+                                <img src="<?php echo htmlspecialchars($creator['icon'], ENT_QUOTES, 'UTF-8'); ?>" alt="Creator Icon" class="w-full h-full object-cover">
+                            <?php else: ?>
+                                <i data-lucide="user" class="w-4 h-4 text-primary"></i>
+                            <?php endif; ?>
+                        </div>
+                        <span class="text-sm font-bold text-muted-foreground">
+                            Created by <span class="text-foreground hover:underline"><?php echo htmlspecialchars($creator['username'], ENT_QUOTES, 'UTF-8'); ?></span>
+                        </span>
+                    </a>
+                    <?php endif; ?>
                     <p class="text-lg text-muted-foreground mb-6">
                         <?php echo htmlspecialchars($playlist['description'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
                     </p>
-                    <button class="inline-flex items-center gap-2 px-8 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-md transition-all font-bold" data-bind="click: handlePlayAll">
+                    
+                    <button class="inline-flex items-center gap-2 px-8 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-md transition-all font-bold" data-bind="click: handlePlayFirst">
                         <i data-lucide="play" class="w-5 h-5 fill-current"></i>
-                        <span>Play All</span>
+                        <span>Play</span>
                     </button>
                     <button data-bind="click: handleShare" class="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-50 text-foreground font-bold rounded-xl shadow-sm border border-border hover:shadow-md transition-all">
                         <i data-lucide="share-2" class="w-5 h-5"></i>
@@ -110,7 +144,7 @@
                 <input 
                     type="text" 
                     data-bind="value: newTrackUrl"
-                    placeholder="YouTube, Spotify, Niconico の URL をペースト..." 
+                    placeholder="YouTube, Niconico の URL をペースト..." 
                     class="flex-1 px-4 py-3 bg-slate-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                     required
                 >
@@ -130,14 +164,20 @@
             <h3 class="text-xl mb-4 text-foreground font-bold flex items-center justify-between">
                 <span>Tracks (<span data-bind="text: tracks().length"></span>)</span>
             </h3>
-            
+    
             <div data-bind="visible: tracks().length === 0" style="display: none;" class="text-center py-12 bg-white/50 rounded-2xl border border-dashed border-gray-300">
                 <i data-lucide="music-4" class="w-12 h-12 text-gray-300 mx-auto mb-3"></i>
                 <p class="text-muted-foreground">URLを貼り付けて、最初の楽曲を追加しましょう。</p>
             </div>
 
-            <div class="space-y-3" data-bind="foreach: tracks">
+            <div class="space-y-3" data-bind="sortableList: tracks, foreach: tracks">
                 <div class="group flex items-center gap-4 bg-white p-3 pr-4 rounded-xl shadow-sm border border-border hover:shadow-md transition-all">
+                    
+                    <?php if ($is_owner): ?>
+                    <div class="drag-handle cursor-grab active:cursor-grabbing p-1 text-gray-300 hover:text-primary transition-colors flex-shrink-0">
+                        <i data-lucide="grip-vertical" class="w-5 h-5"></i>
+                    </div>
+                    <?php endif; ?>
                     
                     <div class="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 cursor-pointer" data-bind="click: $parent.handlePlayTrack">
                         
@@ -180,60 +220,136 @@
 <script>
     lucide.createIcons();
 
-    function PlaylistDetailViewModel() {
-        var self = this;
+    ko.bindingHandlers.sortableList = {
+        init: function(element, valueAccessor, allBindings, viewModel, bindingContext) {
+            let list = valueAccessor();
+            let originalNextSibling; // ドラッグ開始時の「正しい位置」を記憶する変数
 
-        // プレイリストのIDと初期楽曲データ
+            Sortable.create(element, {
+                animation: 150,
+                handle: '.drag-handle',
+                ghostClass: 'opacity-30',
+                dragClass: 'shadow-2xl',
+                
+                // ドラッグ開始時に、その要素のすぐ後ろにあるノード（Knockoutのコメント等）を記憶
+                onStart: function(evt) {
+                    originalNextSibling = evt.item.nextSibling;
+                },
+                
+                onEnd: function(evt) {
+                    if (evt.oldIndex === evt.newIndex) return;
+
+                    let itemEl = evt.item;
+
+                    if (originalNextSibling) {
+                        element.insertBefore(itemEl, originalNextSibling);
+                    } else {
+                        element.appendChild(itemEl);
+                    }
+
+                    let underlyingArray = list();
+                    let item = underlyingArray[evt.oldIndex];
+                    
+                    underlyingArray.splice(evt.oldIndex, 1);
+                    underlyingArray.splice(evt.newIndex, 0, item);
+                    
+                    list.valueHasMutated();
+
+                    // サーバーへ並び順を保存
+                    if (bindingContext.$data.saveTrackOrder) {
+                        bindingContext.$data.saveTrackOrder();
+                    }
+                }
+            });
+        }
+    };
+
+    function PlaylistDetailViewModel() {
+        let self = this;
+
         self.playlistId = <?php echo $playlist['id']; ?>;
-        var initialTracks = <?php echo json_encode($tracks ?? array()); ?>;
+        let initialTracks = <?php echo json_encode($tracks ?? array()); ?>;
         self.tracks = ko.observableArray(initialTracks);
 
         self.newTrackUrl = ko.observable("");
         self.errorMessage = ko.observable("");
-        self.isAdding = ko.observable(false); // ボタンの二重送信防止用
+        self.isAdding = ko.observable(false);
 
-        // ▼ 追加: プレイヤー用の状態管理 ▼
         self.currentTrack = ko.observable(null);
-        
-        // ▼ 追加: YouTube URLから埋め込み用のURLを生成する算出プロパティ ▼
-        self.embedUrl = ko.computed(function() {
-            var track = self.currentTrack();
-            if (!track || !track.url) return null;
 
-            // YouTubeのURLからVideo IDを抽出する正規表現
-            var match = track.url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})/);
-            if (match && match[1]) {
-                // autoplay=1 を付けて自動再生させる
-                return "https://www.youtube.com/embed/" + match[1] + "?autoplay=1";
-            }
-            return null; // YouTube以外は一旦null
+        self.currentIndex = ko.computed(function() {
+            let current = self.currentTrack();
+            if (!current) return -1;
+            return self.tracks().indexOf(current);
         });
 
-        // ▼ 追加: 個別の再生ボタンが押された時 ▼
+        self.hasNext = ko.computed(function() {
+            return self.currentIndex() >= 0 && self.currentIndex() < self.tracks().length - 1;
+        });
+
+        self.hasPrev = ko.computed(function() {
+            return self.currentIndex() > 0;
+        });
+
+        self.playNext = function() {
+            if (self.hasNext()) {
+                self.handlePlayTrack(self.tracks()[self.currentIndex() + 1]);
+            }
+        };
+
+        self.playPrev = function() {
+            if (self.hasPrev()) {
+                self.handlePlayTrack(self.tracks()[self.currentIndex() - 1]);
+            }
+        };
+        
+        self.embedUrl = ko.computed(function() {
+            let track = self.currentTrack();
+            if (!track || !track.url) return null;
+
+            let url = track.url;
+            let platform = track.platform;
+
+            // 1. YouTube の場合
+            if (platform === 'youtube' || url.indexOf('youtu') !== -1) {
+                let ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})/);
+                if (ytMatch && ytMatch[1]) {
+                    // autoplay=1 を付けて自動再生させる
+                    return "https://www.youtube.com/embed/" + ytMatch[1] + "?autoplay=1";
+                }
+            }
+            
+            // 2. ニコニコ動画 の場合
+            else if (platform === 'niconico' || url.indexOf('nico') !== -1) {
+                let nicoMatch = url.match(/(?:nicovideo\.jp\/watch\/|nico\.ms\/)(sm[0-9]+|nm[0-9]+|so[0-9]+|[a-zA-Z0-9]+)/);
+                if (nicoMatch && nicoMatch[1]) {
+                    // TODO: 自動再生
+                    return "https://embed.nicovideo.jp/watch/" + nicoMatch[1];
+                }
+            }
+
+            return null;
+        });
+
         self.handlePlayTrack = function(track) {
             self.currentTrack(track);
-            // アイコンの再描画
             setTimeout(function() { lucide.createIcons(); }, 10);
         };
 
-        // ▼ 追加: プレイヤーを閉じる ▼
         self.closePlayer = function() {
             self.currentTrack(null);
         };
 
-        // ▼ 修正: Play All ボタンが押された時（Playlist Hero部分のボタン等にバインドします） ▼
-        self.handlePlayAll = function() {
+        self.handlePlayFirst = function() {
             if (self.tracks().length > 0) {
-                // とりあえずリストの1曲目を再生
                 self.handlePlayTrack(self.tracks()[0]);
             } else {
                 alert("再生する楽曲がありません。");
             }
         };
 
-        // 楽曲の追加 (Ajax POST)
         self.handleAddTrack = function() {
-            var url = self.newTrackUrl();
+            let url = self.newTrackUrl();
             if (!url) return;
 
             self.errorMessage("");
@@ -251,12 +367,10 @@
             .then(data => {
                 self.isAdding(false);
                 if (data.error) {
-                    self.errorMessage(data.error); // 例外(Invalid URL等)を表示
+                    self.errorMessage(data.error);
                 } else if (data.success && data.track) {
-                    // 成功時：画面の先頭に楽曲カードを追加
                     self.tracks.unshift(data.track);
-                    self.newTrackUrl(""); // 入力欄をクリア
-                    // 新しくDOMに追加されたアイコンを再レンダリング
+                    self.newTrackUrl("");
                     setTimeout(() => lucide.createIcons(), 10);
                 }
             })
@@ -266,21 +380,19 @@
             });
         };
 
-        // 楽曲の削除 (UI上からの非表示処理)
         self.handleDeleteTrack = function(track) {
             if (!confirm('「' + track.title + '」をプレイリストから削除しますか？')) return;
             
             fetch('/api/delete_track', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ pt_id: track.id }) // track.id には playlist_tracks の id が入っています
+                body: JSON.stringify({ pt_id: track.pt_id }) 
             })
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
                     alert('エラー: ' + data.error);
                 } else if (data.success) {
-                    // DBから削除成功後、画面のアニメーションを伴ってリストから消す
                     self.tracks.remove(track);
                 }
             })
@@ -291,7 +403,7 @@
 
         self.handleShare = function() {
             // 現在開いているページのURLを取得
-            var url = window.location.href;
+            let url = window.location.href;
             
             // クリップボードAPIを使用してコピー
             if (navigator.clipboard && window.isSecureContext) {
@@ -302,9 +414,32 @@
                     console.error('Failed to copy: ', err);
                 });
             } else {
-                // SSL(https)環境でない場合等のフォールバック
                 alert("このブラウザでは自動コピーができません。\n以下のURLを手動でコピーしてください：\n\n" + url);
             }
+        };
+
+        self.saveTrackOrder = function() {
+            let orderedIds = self.tracks().map(function(track) {
+                return track.pt_id; 
+            });
+
+            fetch('/api/reorder_tracks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playlist_id: self.playlistId,
+                    track_ids: orderedIds
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('順番の保存に失敗しました: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('通信エラーが発生しました。', error);
+            });
         };
     }
 

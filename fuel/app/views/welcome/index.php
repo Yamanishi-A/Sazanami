@@ -7,7 +7,6 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Figmaで設定された独自カラー（primaryなど）をTailwindに設定
         tailwind.config = {
             theme: {
                 extend: {
@@ -30,6 +29,7 @@
 </head>
 <body class="bg-slate-50">
 
+<?php $is_logged_in = \Session::get('user_id') ? true : false; ?>
 <?php echo View::forge('shared/header', array('user' => isset($user) ? $user : null)); ?>
 
 <div id="landing-page" class="min-h-screen relative overflow-hidden">
@@ -63,9 +63,18 @@
                 Let your favorite music spread like gentle ripples
             </p>
             <div class="flex items-center justify-center gap-4 pt-6">
-                <button data-bind="click: openSignUpModal" class="inline-flex items-center gap-2 px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-all text-lg font-bold">
-                    <span>Sign Up</span>
-                </button>
+                <?php if ($is_logged_in): ?>
+                    <a href="/playlists">
+                        <button class="inline-flex items-center gap-2 px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-all text-lg font-bold">
+                            <i data-lucide="compass" class="w-5 h-5"></i>
+                            <span>Explore Playlists</span>
+                        </button>
+                    </a>
+                <?php else: ?>
+                    <button onclick="window.headerViewModel && window.headerViewModel.openSignUpModal()" class="inline-flex items-center gap-2 px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-all text-lg font-bold">
+                        <span>Sign Up</span>
+                    </button>
+                <?php endif; ?>
             </div>
         </div>
     </section>
@@ -76,18 +85,8 @@
         </div>
 
         <div class="overflow-x-auto pb-4 -mx-6 px-6">
-            <div class="flex gap-6 min-w-max" data-bind="foreach: trendingPlaylists">
-                <a data-bind="attr: { href: '/shared/' + id }" class="group block cursor-pointer">
-                    <div class="bg-white rounded-3xl p-4 shadow-md hover:shadow-xl border border-border transition-all w-64">
-                        <div class="relative overflow-hidden rounded-2xl mb-4 h-64">
-                            <img data-bind="attr: { src: cover, alt: title }" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                            <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-secondary to-accent group-hover:opacity-80 transition-all">
-                                <svg class="w-20 h-20 text-primary/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
-                            </div>
-                            </div>
-                        <h3 class="text-lg text-foreground px-2 font-bold" data-bind="text: title"></h3>
-                    </div>
-                </a>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" data-bind="foreach: trendingPlaylists">
+                <div data-bind="component: { name: 'playlist-card', params: $data }"></div>
             </div>
         </div>
     </section>
@@ -97,91 +96,20 @@
             <p>© 2026 Sazanami. Let your music flow like gentle ocean ripples.</p>
         </div>
     </footer>
-
-    <div data-bind="visible: isLoginModalOpen" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center">
-        <div data-bind="click: closeModals" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 m-4">
-            <h2 class="text-2xl font-bold text-center mb-6 text-primary">Log In</h2>
-            <form action="/auth/login" method="POST" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" name="email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input type="password" name="password" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                </div>
-                <button type="submit" class="w-full py-3 bg-primary text-white rounded-full font-bold hover:bg-primary/90 transition-colors">Log In</button>
-            </form>
-            <p class="mt-4 text-center text-sm text-gray-600">
-                アカウントをお持ちでないですか？ <a href="#" data-bind="click: openSignUpModal" class="text-primary font-bold hover:underline">新規登録</a>
-            </p>
-            <button data-bind="click: closeModals" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">✕</button>
-        </div>
-    </div>
-
-    <div data-bind="visible: isSignUpModalOpen" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center">
-        <div data-bind="click: closeModals" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 m-4">
-            <h2 class="text-2xl font-bold text-center mb-6 text-primary">Sign Up</h2>
-            <form action="/auth/signup" method="POST" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                    <input type="text" name="username" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" name="email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input type="password" name="password" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                </div>
-                <button type="submit" class="w-full py-3 bg-primary text-white rounded-full font-bold hover:bg-primary/90 transition-colors">Sign Up</button>
-            </form>
-            <p class="mt-4 text-center text-sm text-gray-600">
-                すでにアカウントをお持ちですか？ <a href="#" data-bind="click: openLoginModal" class="text-primary font-bold hover:underline">ログイン</a>
-            </p>
-            <button data-bind="click: closeModals" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">✕</button>
-        </div>
-    </div>
-
 </div>
+
+<?php echo View::forge('shared/playlist_card'); ?>
 
 <script>
     function LandingPageViewModel() {
-        var self = this;
+        let self = this;
 
-        // モーダルの表示状態を管理する変数（observableにすることで画面と連動する）
-        self.isLoginModalOpen = ko.observable(false);
-        self.isSignUpModalOpen = ko.observable(false);
+        let dbTrending = <?php echo isset($trending_playlists) ? json_encode($trending_playlists) : '[]'; ?>;
 
-        // トレンドプレイリストのデータ（API等から取得するイメージですが、今回は固定値）
-        self.trendingPlaylists = ko.observableArray([
-            { id: "1", title: "Sunset Waves", cover: "" },
-            { id: "2", title: "Tropical Paradise", cover: "" },
-            { id: "3", title: "Mountain Serenity", cover: "" },
-            { id: "4", title: "Forest Calm", cover: "" },
-            { id: "5", title: "Garden Dreams", cover: "" },
-            { id: "6", title: "Ocean Blues", cover: "" }
-        ]);
-
-        // モーダルを開閉するメソッド
-        self.openLoginModal = function() {
-            self.isSignUpModalOpen(false);
-            self.isLoginModalOpen(true);
-        };
-
-        self.openSignUpModal = function() {
-            self.isLoginModalOpen(false);
-            self.isSignUpModalOpen(true);
-        };
-
-        self.closeModals = function() {
-            self.isLoginModalOpen(false);
-            self.isSignUpModalOpen(false);
-        };
+        self.trendingPlaylists = ko.observableArray(dbTrending);
     }
+
+    setTimeout(function() { lucide.createIcons(); }, 100);
 
     // Knockout.jsの起動（HTMLとViewModelを紐付ける）
     ko.applyBindings(new LandingPageViewModel(), document.getElementById('landing-page'));

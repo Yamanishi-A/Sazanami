@@ -1,27 +1,35 @@
-<?php $is_logged_in = \Session::get('user_id') ? true : false; ?>
+<?php 
+$is_logged_in = \Session::get('user_id') ? true : false; 
+$user_id = \Session::get('user_id');
+?>
 
 <div id="global-header-component">
     
     <header class="w-full bg-white/80 backdrop-blur-sm border-b border-border shadow-sm sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             
-            <a href="<?php echo $is_logged_in ? '/playlists/index' : '/'; ?>" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <?php echo View::forge('shared/logo'); ?>
+            <a href="<?php echo $is_logged_in ? '/users' : '/'; ?>" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <?php echo \View::forge('shared/logo'); ?>
                 <h1 class="text-2xl tracking-wide text-primary font-bold">Sazanami</h1>
             </a>
 
             <div class="flex items-center gap-3">
                 <?php if ($is_logged_in): ?>
-                    <a href="/playlists/discover" class="text-muted-foreground hover:text-primary transition-colors font-medium mr-2 hidden sm:block">Discover</a>
-                    <a href="/playlists/index" class="text-muted-foreground hover:text-primary transition-colors font-medium mr-2 hidden sm:block">My Playlists</a>
+                    <a href="/playlists" class="text-muted-foreground hover:text-primary transition-colors font-medium mr-2 hidden sm:block">Discover</a>
+                    <a href="/users" class="text-muted-foreground hover:text-primary transition-colors font-medium mr-2 hidden sm:block">My Playlists</a>
+                    <form action="/auth/logout" method="POST" class="hidden sm:block m-0 p-0">
+                        <button type="submit" class="text-muted-foreground text-red-500 hover:text-red-600 transition-colors font-medium mr-2 bg-transparent border-none p-0 cursor-pointer">
+                            Log Out
+                        </button>
+                    </form>
                     
-                    <a href="/playlists/settings" class="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-accent flex items-center justify-center border-4 border-white shadow-lg overflow-hidden" aria-label="Settings">
+                    <a href="/users/settings" class="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-accent flex items-center justify-center border-2 border-white shadow-lg overflow-hidden" aria-label="Settings">
                         <?php if (!empty($user['icon'])): ?>
                             <img src="<?php echo htmlspecialchars($user['icon'], ENT_QUOTES, 'UTF-8'); ?>" alt="Profile Icon" class="w-full h-full object-cover">
                         <?php else: ?>
                             <i data-lucide="user" class="w-6 h-6 text-primary"></i>
                         <?php endif; ?>
-                </a>
+                    </a>
                 <?php else: ?>
                     <button data-bind="click: openLoginModal" class="px-5 py-2 rounded-full text-primary hover:bg-secondary/50 transition-colors font-medium">
                         Log In
@@ -34,7 +42,7 @@
         </div>
     </header>
 
-    <?php if ($is_logged_in): ?>
+    <?php if (!$is_logged_in): ?>
         
         <div data-bind="visible: isLoginModalOpen" style="display: none;" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
             <div class="absolute inset-0" data-bind="click: closeModals"></div>
@@ -46,7 +54,7 @@
 
                 <div class="flex justify-center mb-8">
                     <div class="flex items-center gap-2">
-                        <?php echo View::forge('shared/logo', array('class' => 'w-10 h-10 text-primary')); ?>
+                        <?php echo \View::forge('shared/logo', array('class' => 'w-10 h-10 text-primary')); ?>
                         <h1 class="text-3xl tracking-wide text-primary font-bold">Sazanami</h1>
                     </div>
                 </div>
@@ -55,25 +63,27 @@
                     <h2 class="text-2xl font-bold text-foreground mb-2">Welcome back</h2>
                 </div>
 
-                <form action="/auth/login" method="POST" class="space-y-5">
+                <div data-bind="visible: loginError, text: loginError" style="display: none;" class="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm font-bold text-center"></div>
+
+                <form data-bind="submit: handleLogin" class="space-y-5">
                     <div>
-                        <label class="block text-sm font-bold mb-2 text-foreground">Email</label>
+                        <label class="block text-sm font-bold mb-2 text-foreground">Email<span class="text-red-500 ml-1">*</span></label>
                         <div class="relative">
                             <i data-lucide="mail" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></i>
-                            <input type="email" name="email" placeholder="you@example.com" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground">
+                            <input type="email" data-bind="value: loginEmail" placeholder="you@example.com" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground">
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-bold mb-2 text-foreground">Password</label>
+                        <label class="block text-sm font-bold mb-2 text-foreground">Password<span class="text-red-500 ml-1">*</span></label>
                         <div class="relative">
                             <i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></i>
-                            <input type="password" name="password" placeholder="Enter your password" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground">
+                            <input type="password" data-bind="value: loginPassword" placeholder="Enter your password" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground">
                         </div>
                     </div>
 
-                    <button type="submit" class="w-full py-4 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all">
-                        Log In
+                    <button type="submit" data-bind="disable: isLoggingIn" class="w-full py-4 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50">
+                        <span data-bind="text: isLoggingIn() ? 'Logging in...' : 'Log In'"></span>
                     </button>
                 </form>
 
@@ -90,7 +100,7 @@
             <div class="absolute inset-0" data-bind="click: closeModals"></div>
             <div class="w-full max-w-md bg-white rounded-3xl p-10 shadow-2xl border border-border relative z-10">
                 <button data-bind="click: closeModals" class="absolute top-6 right-6 text-muted-foreground hover:text-foreground transition-colors">
-                    <?php echo View::forge('shared/logo', array('class' => 'w-6 h-6 text-primary')); ?>
+                    <i data-lucide="x" class="w-6 h-6"></i>
                 </button>
 
                 <div class="flex justify-center mb-6">
@@ -104,31 +114,33 @@
                     <h2 class="text-2xl font-bold text-foreground mb-2">Create an account</h2>
                 </div>
 
-                <form action="/auth/signup" method="POST" class="space-y-4">
+                <div data-bind="visible: signUpError, text: signUpError" style="display: none;" class="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm font-bold text-center"></div>
+
+                <form data-bind="submit: handleSignUp" class="space-y-4">
                     <div>
-                        <label class="block text-sm font-bold mb-1 text-foreground">Username</label>
+                        <label class="block text-sm font-bold mb-1 text-foreground">Username<span class="text-red-500 ml-1">*</span></label>
                         <div class="relative">
                             <i data-lucide="user" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></i>
-                            <input type="text" name="username" placeholder="Your name" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
+                            <input type="text" data-bind="value: signUpUsername" placeholder="Your name" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-bold mb-1 text-foreground">Email</label>
+                        <label class="block text-sm font-bold mb-1 text-foreground">Email<span class="text-red-500 ml-1">*</span></label>
                         <div class="relative">
                             <i data-lucide="mail" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></i>
-                            <input type="email" name="email" placeholder="you@example.com" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
+                            <input type="email" data-bind="value: signUpEmail" placeholder="you@example.com" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-bold mb-1 text-foreground">Password</label>
+                        <label class="block text-sm font-bold mb-1 text-foreground">Password<span class="text-red-500 ml-1">*</span></label>
                         <div class="relative">
                             <i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></i>
-                            <input type="password" name="password" placeholder="Create a password" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
+                            <input type="password" data-bind="value: signUpPassword" placeholder="Create a password" required class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
                         </div>
                     </div>
 
-                    <button type="submit" class="w-full py-4 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all mt-2">
-                        Sign Up
+                    <button type="submit" data-bind="disable: isSigningUp" class="w-full py-4 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all mt-2 disabled:opacity-50">
+                        <span data-bind="text: isSigningUp() ? 'Signing up...' : 'Sign Up'"></span>
                     </button>
                 </form>
 
@@ -142,16 +154,93 @@
         </div>
 
         <script>
-            // ヘッダー部分だけで独立して動くViewModel
             function HeaderViewModel() {
-                var self = this;
+                let self = this;
                 self.isLoginModalOpen = ko.observable(false);
                 self.isSignUpModalOpen = ko.observable(false);
+
+                self.loginEmail = ko.observable("");
+                self.loginPassword = ko.observable("");
+                self.loginError = ko.observable("");
+                self.isLoggingIn = ko.observable(false);
+
+                self.signUpUsername = ko.observable("");
+                self.signUpEmail = ko.observable("");
+                self.signUpPassword = ko.observable("");
+                self.signUpError = ko.observable("");
+                self.isSigningUp = ko.observable(false);
+
+                self.handleSignUp = function() {
+                    self.signUpError("");
+                    self.isSigningUp(true);
+
+                    let currentPath = window.location.pathname + window.location.search;
+
+                    fetch('/auth/signup', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            username: self.signUpUsername(),
+                            email: self.signUpEmail(),
+                            password: self.signUpPassword(),
+                            redirect_to: currentPath
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.href = data.redirect_to || currentPath;
+                        } else {
+                            self.isSigningUp(false);
+                            self.signUpError(data.error || 'サインアップに失敗しました。');
+                        }
+                    })
+                    .catch(error => {
+                        self.isSigningUp(false);
+                        self.signUpError('通信エラーが発生しました。');
+                    });
+                };
+
+                self.handleLogin = function() {
+                    self.loginError("");
+                    self.isLoggingIn(true);
+
+                    let currentPath = window.location.pathname + window.location.search;
+
+                    fetch('/auth/login', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            email: self.loginEmail(),
+                            password: self.loginPassword(),
+                            redirect_to: currentPath
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.href = data.redirect_to || currentPath;
+                        } else {
+                            self.isLoggingIn(false);
+                            self.loginError(data.error || 'ログインに失敗しました。');
+                        }
+                    })
+                    .catch(error => {
+                        self.isLoggingIn(false);
+                        self.loginError('通信エラーが発生しました。');
+                    });
+                };
 
                 self.openLoginModal = function() {
                     self.isSignUpModalOpen(false);
                     self.isLoginModalOpen(true);
-                    document.body.style.overflow = "hidden"; // スクロール防止
+                    document.body.style.overflow = "hidden";
                 };
 
                 self.openSignUpModal = function() {
@@ -167,12 +256,11 @@
                 };
             }
 
-            // 他のページのKnockoutバインディングと衝突しないように、
-            // ヘッダーのdiv要素(global-header-component)に限定してバインドする
             document.addEventListener("DOMContentLoaded", function() {
-                var headerElement = document.getElementById('global-header-component');
+                let headerElement = document.getElementById('global-header-component');
                 if (headerElement) {
-                    ko.applyBindings(new HeaderViewModel(), headerElement);
+                    window.headerViewModel = new HeaderViewModel();
+                    ko.applyBindings(window.headerViewModel, headerElement);
                     if (typeof lucide !== 'undefined') {
                         lucide.createIcons({ root: headerElement });
                     }

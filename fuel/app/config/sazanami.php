@@ -1,12 +1,14 @@
 <?php
 return array(
-    'pagination_limit' => 12,
+    'upload' => array(
+        'allowed_extensions' => array('jpg', 'jpeg', 'png', 'gif'),
+        'paths' => array(
+            'cover_image' => '/assets/img/covers/',
+            'icon'  => '/assets/img/icons/',
+        ),
+    ),
 
-    'max_tracks_per_playlist' => 50,
-
-    'supported_platforms' => array(
-        'youtube'  => array('youtube.com', 'youtu.be'),
-        'spotify'  => array('open.spotify.com'),
-        'niconico' => array('nicovideo.jp'),
+    'display' => array(
+        'trending_limit' => 4, // トップページに表示するトレンドプレイリストの件数
     ),
 );

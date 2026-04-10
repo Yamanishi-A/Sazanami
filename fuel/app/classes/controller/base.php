@@ -1,6 +1,6 @@
 <?php
 
-class Controller_Base extends Controller
+class Controller_Base extends \Controller
 {
     public $current_user = null;
 
@@ -8,25 +8,25 @@ class Controller_Base extends Controller
     {
         parent::before();
 
-        $user_id = Session::get('user_id');
+        $user_id = \Session::get('user_id');
 
         if ($user_id) {
-            $result = DB::select()
-                ->from('users')
-                ->where('id', $user_id)
-                ->execute()
-                ->current();
+            $result = \Model_User::get_user_by_id($user_id);
 
             if ($result) {
                 $this->current_user = $result;
             }
         }
 
-        $uri = Uri::string();
-        $public_uris = array('auth/login', 'auth/signup', '', 'welcome/index', 'playlists/discover', 'playlists/view'); 
+        if (!\Session::get('user_id')) {
+            $controller = \Request::active()->controller;
+            $action = \Request::active()->action;
+            
+            $is_users = ($controller === 'Controller_Users');
 
-        if ( ! $this->current_user && ! in_array($uri, $public_uris)) {
-            Response::redirect('');
+            if ($controller === 'Controller_Users' && in_array($action, ['index', 'settings'])) {
+                return \Response::redirect('/');
+            }
         }
     }
 }
