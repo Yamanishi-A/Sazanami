@@ -1,65 +1,53 @@
-# インターン課題環境構築手順
+# Sazanami - プレイリスト共有アプリ
 
-## Dockerの基本知識
-Dockerの基本的な概念については、以下のリンクを参考にしてください：
-- [Docker入門（1）](https://qiita.com/Sicut_study/items/4f301d000ecee98e78c9)
-- [Docker入門（2）](https://qiita.com/takusan64/items/4d622ce1858c426719c7)
+## 概要
+本アプリは、YouTubeとニコニコ動画のURLを取り込むことで、好きな音楽や動画をプレイリスト形式で共有できるアプリです。
 
-## セットアップ手順
-
-1. **リポジトリをクローン**
-   ```bash
-   git clone <リポジトリURL>
-   ```
-
-2. **dockerディレクトリに移動**
-   ```bash
-   cd docker
-   ```
-
-3. **データベース名の設定**
-   `docker-compose.yml` 内の `db` サービスにある `MYSQL_DATABASE` の値を、各自任意のデータベース名に設定してください。
+## テーブル作成に使用するSQL文
+   ```SQL
+   DROP TABLE IF EXISTS `playlist_tracks`;
+   DROP TABLE IF EXISTS `tracks`;
+   DROP TABLE IF EXISTS `playlists`;
+   DROP TABLE IF EXISTS `users`;
    
-   例:
-   ```yaml
-   environment:
-     MYSQL_ROOT_PASSWORD: root
-     MYSQL_DATABASE: <your_database_name>  # 任意のデータベース名を指定
+   CREATE TABLE `users` (
+     `id` INT AUTO_INCREMENT PRIMARY KEY,
+     `username` VARCHAR(64) NOT NULL,
+     `email` VARCHAR(255) NOT NULL UNIQUE,
+     `password_hash` VARCHAR(255) NOT NULL,
+     `icon` VARCHAR(512) DEFAULT NULL,
+     `bio` TEXT DEFAULT NULL,
+     `created_at` DATETIME DEFAULT NULL
+   );
+   
+   CREATE TABLE `playlists` (
+     `id` INT AUTO_INCREMENT PRIMARY KEY,
+     `user_id` INT NOT NULL,
+     `title` VARCHAR(128) NOT NULL,
+     `description` TEXT DEFAULT NULL,
+     `cover_image` VARCHAR(512) DEFAULT NULL,
+     `created_at` DATETIME DEFAULT NULL,
+     `updated_at` DATETIME DEFAULT NULL,
+     FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+   );
+   
+   CREATE TABLE `tracks` (
+     `id` INT AUTO_INCREMENT PRIMARY KEY,
+     `url` VARCHAR(512) NOT NULL UNIQUE, 
+     `platform` VARCHAR(16) NOT NULL,
+     `title` VARCHAR(255) NOT NULL,
+     `artist` VARCHAR(255) DEFAULT NULL,
+     `thumbnail_url` VARCHAR(512) DEFAULT NULL,
+     `created_at` DATETIME DEFAULT NULL
+   );
+   
+   CREATE TABLE `playlist_tracks` (
+     `id` INT AUTO_INCREMENT PRIMARY KEY,
+     `playlist_id` INT NOT NULL,
+     `track_id` INT NOT NULL,
+     `sort_order` INT DEFAULT 0,
+     `created_at` DATETIME DEFAULT NULL,
+     FOREIGN KEY (`playlist_id`) REFERENCES `playlists`(`id`) ON DELETE CASCADE,
+     FOREIGN KEY (`track_id`) REFERENCES `tracks`(`id`) ON DELETE CASCADE
+   );
    ```
-
-4. **Dockerイメージのビルド**
-   ```bash
-   docker-compose build
-   ```
-
-5. **コンテナの起動**
-   ```bash
-   docker-compose up -d
-   ```
-6. **ブラウザからlocalhostにアクセス**
-
-## PHP周りのバージョン
-- **PHP**: 7.3
-- **FuelPHP**: 1.8
-
-## ログについて
-- **アクセスログ**: Dockerのコンテナのログ
-- **FuelPHPのエラーログ**: /var/www/html/intern_kadai/fuel/app/logs/
-  - 年月日ごとにログが管理されている
-  - tail -f {見たいログファイル}でログを出力
-
-## MySQLコンテナ設定
-このプロジェクトには、MySQLを使用するDBコンテナが含まれています。設定は以下の通りです。
-
-- **MySQLバージョン**: 8.0
-- **ポート**: `3306`
-- **環境変数**:
-  - `MYSQL_ROOT_PASSWORD`: root
-  - `MYSQL_DATABASE`: 各自設定したデータベース名
-
-### アクセス情報
-- **ホスト**: `localhost`
-- **ポート**: `3306`
-- **ユーザー名**: `root`
-- **パスワード**: `root`
-- **データベース名**: 各自設定した名前
