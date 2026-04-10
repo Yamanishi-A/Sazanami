@@ -192,10 +192,8 @@ $user_id = \Session::get('user_id');
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            // 成功時は指定のページ（または現在のページ）へ
                             window.location.href = data.redirect_to || currentPath;
                         } else {
-                            // 失敗時はモーダル内にエラーを表示
                             self.isSigningUp(false);
                             self.signUpError(data.error || 'サインアップに失敗しました。');
                         }

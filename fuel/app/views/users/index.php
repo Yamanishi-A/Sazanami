@@ -233,7 +233,7 @@
 
         // モーダルの状態管理
         self.showModal = ko.observable(false);
-        self.modalMode = ko.observable("create"); // "create" or "edit"
+        self.modalMode = ko.observable("create");
         self.editingId = ko.observable(null);
         
         // フォーム入力用のデータバインド変数
@@ -285,7 +285,7 @@
             reader.onload = function(e) {
                 let img = new Image();
                 img.onload = function() {
-                    // ▼ 自動リサイズの最大サイズを設定 (例: 800x800)
+                    // ▼ 自動リサイズの最大サイズを設定
                     let MAX_WIDTH = 800;
                     let MAX_HEIGHT = 800;
                     let width = img.width;
@@ -317,7 +317,7 @@
                     // プレビューにセット
                     self.coverImagePreview(dataUrl);
 
-                    // ▼ Base64を「送信用のBlob（ファイル）データ」に変換する処理
+                    // Base64を「送信用のBlob（ファイル）データ」に変換
                     let bin = atob(dataUrl.split(',')[1]);
                     let buffer = new Uint8Array(bin.length);
                     for (let i = 0; i < bin.length; i++) {
@@ -348,7 +348,7 @@
             self.showModal(false);
         };
 
-        // フォーム送信（Ajax通信）
+        // フォーム送信
         self.savePlaylist = function() {
             if (!self.modalTitle()) {
                 alert("プレイリスト名を入力してください");
@@ -368,7 +368,6 @@
 
             // 画像ファイルが選択されていればFormDataに追加
             if (self.coverImageFile()) {
-                // ▼ 第3引数に仮想のファイル名 ('cover.jpg') を追加します
                 formData.append('cover_image', self.coverImageFile(), 'cover.jpg');
             }
 
@@ -376,15 +375,13 @@
 
             fetch('/api/save_playlist', {
                 method: 'POST',
-                // ※注意: FormDataを送信する場合、Content-Typeヘッダーは指定してはいけません（ブラウザが自動設定します）
                 body: formData
             })
             .then(response => {
-                return response.text(); // 一旦JSONではなく単なるテキストとして受け取る
+                return response.text();
             })
             .then(text => {
                 try {
-                    // 受け取ったテキストをJSONに変換してみる
                     let data = JSON.parse(text);
                     if (data.error) {
                         alert('エラー: ' + data.error);
@@ -392,7 +389,6 @@
                         window.location.reload(); // 成功時はリロード
                     }
                 } catch (e) {
-                    // JSON変換に失敗した＝FuelPHPがHTMLのエラー画面などを吐いている！
                     console.error("【サーバーからのエラー応答】\n", text);
                     alert("サーバー側でエラーが発生しました。F12キーを押して「Console」タブの赤い文字を確認してください。");
                 }
@@ -406,7 +402,7 @@
             });
         };
 
-        // ▼ 追加: プレイリストの削除 ▼
+        // プレイリストの削除
         self.handleDeletePlaylist = function(playlist) {
             if (!confirm('本当にプレイリスト「' + playlist.title + '」を削除しますか？\n（追加された楽曲もリストから消去されます）')) {
                 return;

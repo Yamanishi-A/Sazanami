@@ -7,7 +7,6 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Figmaで設定された独自カラー（primaryなど）をTailwindに設定
         tailwind.config = {
             theme: {
                 extend: {

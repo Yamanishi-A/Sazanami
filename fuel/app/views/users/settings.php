@@ -174,7 +174,7 @@
         self.profileBio = ko.observable("<?php echo htmlspecialchars($user['bio'] ?? '', ENT_QUOTES, 'UTF-8'); ?>");
         self.email = ko.observable("<?php echo htmlspecialchars($user['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>");
         
-        // アイコン関連 (avatar_image ではなく icon を使用)
+        // アイコン関連
         self.iconPreview = ko.observable("<?php echo isset($user['icon']) ? $user['icon'] : ''; ?>");
         self.iconFile = ko.observable(null);
         self.removeIconFlag = ko.observable(false);
@@ -199,7 +199,7 @@
             setTimeout(function() { self.alertMessage(""); }, 5000);
         };
 
-        // ▼ Canvasによる画像圧縮アップロード処理
+        // Canvasによる画像圧縮アップロード処理
         self.handleImageUpload = function(data, event) {
             let file = event.target.files[0];
             if (!file) return;
@@ -252,7 +252,7 @@
             if (fileInput) fileInput.value = ""; 
         };
 
-        // ▼ プロフィール保存処理 (DB連携)
+        // プロフィール保存処理
         self.handleSaveChanges = function() {
             if (!self.username().trim()) {
                 self.showAlert("Username is required.", "error");
@@ -278,7 +278,6 @@
             .then(data => {
                 if (data.success) {
                     self.showAlert("Profile changes saved successfully!", "success");
-                    // ヘッダーなどの反映のためにリロードしても良いですが、今回は表示変更のみ
                 } else {
                     self.showAlert("Error: " + (data.error || "Failed to update profile"), "error");
                 }
@@ -291,13 +290,8 @@
             });
         };
 
-        // ▼ パスワード変更処理 (DB連携)
+        // パスワード変更処理
         self.handlePasswordReset = function() {
-            if (!self.newPassword() || self.newPassword().length < 6) {
-                self.showAlert("Password must be at least 6 characters long.", "error");
-                return;
-            }
-
             self.isSavingPassword(true);
 
             fetch('/api/reset_password', {
@@ -309,7 +303,7 @@
             .then(data => {
                 if (data.success) {
                     self.showAlert("Password updated successfully!", "success");
-                    self.newPassword(""); // フィールドをクリア
+                    self.newPassword("");
                 } else {
                     self.showAlert("Error: " + (data.error || "Failed to update password"), "error");
                 }
@@ -322,7 +316,7 @@
             });
         };
 
-        // ▼ アカウント削除処理 (DB連携)
+        // アカウント削除処理
         self.handleDeleteAccount = function() {
             let confirmed = confirm("Are you sure you want to delete your account? This action cannot be undone and all your playlists will be lost.");
             
@@ -334,7 +328,7 @@
                 .then(data => {
                     if (data.success) {
                         alert("Your account has been deleted.");
-                        window.location.href = '/'; // トップページへリダイレクト
+                        window.location.href = '/';
                     } else {
                         self.showAlert("Failed to delete account.", "error");
                     }

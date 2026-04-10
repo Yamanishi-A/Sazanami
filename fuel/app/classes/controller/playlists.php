@@ -43,10 +43,6 @@ class Controller_Playlists extends \Controller_Base
         // Modelから楽曲とユーザー情報を取得
         $tracks = \Model_Track::get_tracks_by_playlist($id);
         $user = \Model_User::get_user_by_id($user_id);
-
-        // ==========================================
-        // ▼ 追加: プレイリストの「作成者」の情報を取得
-        // ==========================================
         $creator = \Model_User::get_user_by_id($playlist['user_id']);
 
         $view = \View::forge('playlists/view');
@@ -54,8 +50,6 @@ class Controller_Playlists extends \Controller_Base
         $view->set('tracks', $tracks);
         $view->set('user', $user);
         $view->set('is_owner', $is_owner);
-        
-        // ▼ 追加: 取得した作成者データをビューに渡す
         $view->set('creator', $creator);
 
         return \Response::forge($view);

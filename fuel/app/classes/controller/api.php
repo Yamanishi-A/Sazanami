@@ -121,7 +121,7 @@ class Controller_Api extends \Controller_Base
             'bio' => \Input::post('bio')
         );
 
-        $icon_url = $this->handle_upload('icon', 'icons');
+        $icon_url = $this->handle_upload('icon');
 
         if (\Input::post('remove_icon') === '1') {
             $update_data['icon'] = null;
@@ -148,7 +148,7 @@ class Controller_Api extends \Controller_Base
             \Model_User::reset_password($user_id, $new_password);
             return $this->response_json(array('success' => true));
         } catch (\Exception $e) {
-            return $this->response_json(array('error' => 'DB Error'), 500);
+            return $this->response_json(array('error' => $e->getMessage()), 500);
         }
     }
 

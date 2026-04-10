@@ -220,7 +220,6 @@
 <script>
     lucide.createIcons();
 
-    // ▼ 修正: SortableJS用のカスタムバインディング（完全動作版） ▼
     ko.bindingHandlers.sortableList = {
         init: function(element, valueAccessor, allBindings, viewModel, bindingContext) {
             let list = valueAccessor();
@@ -232,7 +231,7 @@
                 ghostClass: 'opacity-30',
                 dragClass: 'shadow-2xl',
                 
-                // ▼ 追加: ドラッグ開始時に、その要素のすぐ後ろにあるノード（Knockoutのコメント等）を記憶
+                // ドラッグ開始時に、その要素のすぐ後ろにあるノード（Knockoutのコメント等）を記憶
                 onStart: function(evt) {
                     originalNextSibling = evt.item.nextSibling;
                 },
@@ -241,24 +240,19 @@
                     if (evt.oldIndex === evt.newIndex) return;
 
                     let itemEl = evt.item;
-                    
-                    // ▼ 修正: Sortableが移動させたDOMを、記憶しておいた「全く同じ場所」に寸分狂わず戻す
-                    // （これによりKnockoutのトラッキングが壊れるのを防ぎます）
+
                     if (originalNextSibling) {
                         element.insertBefore(itemEl, originalNextSibling);
                     } else {
                         element.appendChild(itemEl);
                     }
 
-                    // ▼ DOMが完全に元通りになった後で、Knockoutの配列だけを書き換える
-                    // これにより、画面の再描画はKnockout自身が安全に行います
                     let underlyingArray = list();
                     let item = underlyingArray[evt.oldIndex];
                     
                     underlyingArray.splice(evt.oldIndex, 1);
                     underlyingArray.splice(evt.newIndex, 0, item);
                     
-                    // 配列の中身が変わったことをKnockoutに通知
                     list.valueHasMutated();
 
                     // サーバーへ並び順を保存
@@ -273,16 +267,14 @@
     function PlaylistDetailViewModel() {
         let self = this;
 
-        // プレイリストのIDと初期楽曲データ
         self.playlistId = <?php echo $playlist['id']; ?>;
         let initialTracks = <?php echo json_encode($tracks ?? array()); ?>;
         self.tracks = ko.observableArray(initialTracks);
 
         self.newTrackUrl = ko.observable("");
         self.errorMessage = ko.observable("");
-        self.isAdding = ko.observable(false); // ボタンの二重送信防止用
+        self.isAdding = ko.observable(false);
 
-        // ▼ 追加: プレイヤー用の状態管理 ▼
         self.currentTrack = ko.observable(null);
 
         self.currentIndex = ko.computed(function() {
@@ -331,11 +323,12 @@
             else if (platform === 'niconico' || url.indexOf('nico') !== -1) {
                 let nicoMatch = url.match(/(?:nicovideo\.jp\/watch\/|nico\.ms\/)(sm[0-9]+|nm[0-9]+|so[0-9]+|[a-zA-Z0-9]+)/);
                 if (nicoMatch && nicoMatch[1]) {
+                    // TODO: 自動再生
                     return "https://embed.nicovideo.jp/watch/" + nicoMatch[1];
                 }
             }
 
-            return null; // どれにも一致しない、または変換できない場合はnull
+            return null;
         });
 
         self.handlePlayTrack = function(track) {
@@ -343,7 +336,6 @@
             setTimeout(function() { lucide.createIcons(); }, 10);
         };
 
-        // ▼ 追加: プレイヤーを閉じる ▼
         self.closePlayer = function() {
             self.currentTrack(null);
         };
@@ -356,7 +348,6 @@
             }
         };
 
-        // 楽曲の追加 (Ajax POST)
         self.handleAddTrack = function() {
             let url = self.newTrackUrl();
             if (!url) return;
@@ -376,12 +367,10 @@
             .then(data => {
                 self.isAdding(false);
                 if (data.error) {
-                    self.errorMessage(data.error); // 例外(Invalid URL等)を表示
+                    self.errorMessage(data.error);
                 } else if (data.success && data.track) {
-                    // 成功時：画面の先頭に楽曲カードを追加
                     self.tracks.unshift(data.track);
-                    self.newTrackUrl(""); // 入力欄をクリア
-                    // 新しくDOMに追加されたアイコンを再レンダリング
+                    self.newTrackUrl("");
                     setTimeout(() => lucide.createIcons(), 10);
                 }
             })
@@ -391,14 +380,12 @@
             });
         };
 
-        // 楽曲の削除 (UI上からの非表示処理)
         self.handleDeleteTrack = function(track) {
             if (!confirm('「' + track.title + '」をプレイリストから削除しますか？')) return;
             
             fetch('/api/delete_track', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // ▼ 修正: track.id ではなく track.pt_id を送信する
                 body: JSON.stringify({ pt_id: track.pt_id }) 
             })
             .then(response => response.json())
@@ -427,24 +414,21 @@
                     console.error('Failed to copy: ', err);
                 });
             } else {
-                // SSL(https)環境でない場合等のフォールバック
                 alert("このブラウザでは自動コピーができません。\n以下のURLを手動でコピーしてください：\n\n" + url);
             }
         };
 
         self.saveTrackOrder = function() {
-            // ▼ 修正: track.id ではなく、中間テーブルの track.pt_id を取得する
             let orderedIds = self.tracks().map(function(track) {
                 return track.pt_id; 
             });
 
-            // ▼ 修正: api.php で定義されている 'reorder_tracks' エンドポイントに送る
             fetch('/api/reorder_tracks', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     playlist_id: self.playlistId,
-                    track_ids: orderedIds // ▼ 修正: api.phpが期待している 'track_ids' という名前にする
+                    track_ids: orderedIds
                 })
             })
             .then(response => response.json())

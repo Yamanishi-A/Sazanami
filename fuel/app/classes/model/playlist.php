@@ -86,7 +86,6 @@ class Model_Playlist extends \Model
 
     public static function get_discover_playlists()
     {
-        // 1. プレイリスト本体と、作成者の情報を結合して取得
         $query = \DB::select(
             'p.id', 'p.title', 'p.cover_image',
             array('u.username', 'creatorName'),
@@ -101,7 +100,6 @@ class Model_Playlist extends \Model
 
         $discover_playlists = array();
 
-        // 2. 各プレイリストに含まれる「楽曲数」と「プラットフォーム」を集計
         foreach ($query as $playlist) {
             $track_count = \DB::select(\DB::expr('COUNT(*) as count'))
                 ->from('playlist_tracks')
@@ -117,7 +115,6 @@ class Model_Playlist extends \Model
                 ->execute()
                 ->as_array();
 
-            // array_column を使ってシンプルに配列化
             $platforms = array_column($platforms_query, 'platform');
 
             $discover_playlists[] = array(
@@ -185,9 +182,6 @@ class Model_Playlist extends \Model
         return $trending_playlists;
     }
 
-    // ==========================================
-    // ▼ 追加: 特定ユーザーの公開プレイリストを取得する（リッチ形式）
-    // ==========================================
     public static function get_rich_user_playlists($user_id)
     {
         $query = \DB::select(

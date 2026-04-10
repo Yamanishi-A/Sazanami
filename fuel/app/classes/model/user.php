@@ -32,7 +32,6 @@ class Model_User extends \Model
 
     public static function update_settings($user_id, $update_data)
     {
-        $update_data['updated_at'] = date('Y-m-d H:i:s');
         return \DB::update('users')->set($update_data)->where('id', $user_id)->execute();
     }
 
@@ -40,8 +39,7 @@ class Model_User extends \Model
     {
         $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
         return \DB::update('users')->set(array(
-            'password_hash' => $hashed_password, 
-            'updated_at' => date('Y-m-d H:i:s')
+            'password_hash' => $hashed_password,
         ))->where('id', $user_id)->execute();
     }
 

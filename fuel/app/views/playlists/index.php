@@ -84,7 +84,6 @@
                     svg = '<svg viewBox="0 0 24 24" class="w-4 h-4 fill-current"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>';
             }
 
-            // クラスとSVG要素を適用
             element.className += ' ' + colorClass;
             element.innerHTML = svg;
         }
@@ -93,17 +92,13 @@
     function DiscoverViewModel() {
         let self = this;
 
-        // PHPのコントローラーから渡された本物のDBデータを受け取る
         let dbPlaylists = <?php echo isset($playlists) ? json_encode($playlists) : '[]'; ?>;
         
-        // ObservableArrayにセット
         self.discoverPlaylists = ko.observableArray(dbPlaylists);
     }
 
-    // アイコンの描画とViewModelの適用
     ko.applyBindings(new DiscoverViewModel(), document.getElementById('discover-page'));
     
-    // Lucideアイコンの描画
     setTimeout(function() { lucide.createIcons(); }, 100);
 </script>
 
