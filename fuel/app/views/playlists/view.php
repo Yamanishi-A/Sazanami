@@ -30,7 +30,7 @@
 </head>
 <body class="bg-slate-50">
 
-<?php echo View::forge('shared/header', array('user' => isset($user) ? $user : null)); ?>
+<?php echo \View::forge('shared/header', array('user' => isset($user) ? $user : null)); ?>
 
 <div id="playlist-detail-page" class="min-h-screen relative overflow-hidden">
     <div class="fixed inset-0 -z-10 overflow-hidden">
@@ -52,13 +52,24 @@
             <div class="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
                 
                 <div class="flex items-center gap-4 flex-1 min-w-0" data-bind="with: currentTrack">
-                    <div class="w-12 h-12 rounded-md bg-gradient-to-br from-secondary to-accent flex items-center justify-center flex-shrink-0">
-                        <i data-lucide="music" class="w-6 h-6 text-primary"></i>
+                    <img data-bind="visible: $data.thumbnail_url, attr: { src: $data.thumbnail_url, alt: title }" class="w-12 h-12 rounded-md object-cover" style="display: none;" />
+                        
+                    <div data-bind="visible: !$data.thumbnail_url" class="w-12 h-12 rounded-md bg-gradient-to-br from-secondary to-accent flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="music" class="w-6 h-6 text-primary/40"></i>
                     </div>
                     <div class="min-w-0">
                         <h4 class="text-sm font-bold text-foreground truncate" data-bind="text: title"></h4>
                         <span class="text-xs font-bold uppercase px-2 py-0.5 rounded-md bg-slate-100 border border-gray-200 text-muted-foreground" data-bind="text: platform"></span>
                     </div>
+                </div>
+
+                <div class="flex items-center justify-center gap-2 px-2 sm:px-6">
+                    <button data-bind="click: playPrev, disable: !hasPrev()" class="p-2 text-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="前の曲へ">
+                        <i data-lucide="skip-back" class="w-6 h-6 fill-current"></i>
+                    </button>
+                    <button data-bind="click: playNext, disable: !hasNext()" class="p-2 text-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="次の曲へ">
+                        <i data-lucide="skip-forward" class="w-6 h-6 fill-current"></i>
+                    </button>
                 </div>
 
                 <div class="overflow-hidden bg-black transition-all duration-300"
@@ -96,9 +107,9 @@
                     <p class="text-lg text-muted-foreground mb-6">
                         <?php echo htmlspecialchars($playlist['description'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
                     </p>
-                    <button class="inline-flex items-center gap-2 px-8 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-md transition-all font-bold" data-bind="click: handlePlayAll">
+                    <button class="inline-flex items-center gap-2 px-8 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-md transition-all font-bold" data-bind="click: handlePlayFirst">
                         <i data-lucide="play" class="w-5 h-5 fill-current"></i>
-                        <span>Play All</span>
+                        <span>Play</span>
                     </button>
                     <button data-bind="click: handleShare" class="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-50 text-foreground font-bold rounded-xl shadow-sm border border-border hover:shadow-md transition-all">
                         <i data-lucide="share-2" class="w-5 h-5"></i>
@@ -261,14 +272,39 @@
 
         // ▼ 追加: プレイヤー用の状態管理 ▼
         self.currentTrack = ko.observable(null);
+
+        self.currentIndex = ko.computed(function() {
+            var current = self.currentTrack();
+            if (!current) return -1;
+            return self.tracks().indexOf(current);
+        });
+
+        self.hasNext = ko.computed(function() {
+            return self.currentIndex() >= 0 && self.currentIndex() < self.tracks().length - 1;
+        });
+
+        self.hasPrev = ko.computed(function() {
+            return self.currentIndex() > 0;
+        });
+
+        self.playNext = function() {
+            if (self.hasNext()) {
+                self.handlePlayTrack(self.tracks()[self.currentIndex() + 1]);
+            }
+        };
+
+        self.playPrev = function() {
+            if (self.hasPrev()) {
+                self.handlePlayTrack(self.tracks()[self.currentIndex() - 1]);
+            }
+        };
         
-        // ▼ 追加: YouTube URLから埋め込み用のURLを生成する算出プロパティ ▼
         self.embedUrl = ko.computed(function() {
             var track = self.currentTrack();
             if (!track || !track.url) return null;
 
             var url = track.url;
-            var platform = track.platform; // api.php で保存した 'youtube', 'spotify', 'niconico' のいずれか
+            var platform = track.platform;
 
             // 1. YouTube の場合
             if (platform === 'youtube' || url.indexOf('youtu') !== -1) {
@@ -290,10 +326,8 @@
             
             // 3. ニコニコ動画 の場合
             else if (platform === 'niconico' || url.indexOf('nico') !== -1) {
-                // 通常のURL (https://www.nicovideo.jp/watch/smxxxx または https://nico.ms/smxxxx) からIDを抽出
                 var nicoMatch = url.match(/(?:nicovideo\.jp\/watch\/|nico\.ms\/)(sm[0-9]+|nm[0-9]+|so[0-9]+|[a-zA-Z0-9]+)/);
                 if (nicoMatch && nicoMatch[1]) {
-                    // ニコニコの公式埋め込みプレイヤーURL
                     return "https://embed.nicovideo.jp/watch/" + nicoMatch[1];
                 }
             }
@@ -301,10 +335,8 @@
             return null; // どれにも一致しない、または変換できない場合はnull
         });
 
-        // ▼ 追加: 個別の再生ボタンが押された時 ▼
         self.handlePlayTrack = function(track) {
             self.currentTrack(track);
-            // アイコンの再描画
             setTimeout(function() { lucide.createIcons(); }, 10);
         };
 
@@ -313,10 +345,8 @@
             self.currentTrack(null);
         };
 
-        // ▼ 修正: Play All ボタンが押された時（Playlist Hero部分のボタン等にバインドします） ▼
-        self.handlePlayAll = function() {
+        self.handlePlayFirst = function() {
             if (self.tracks().length > 0) {
-                // とりあえずリストの1曲目を再生
                 self.handlePlayTrack(self.tracks()[0]);
             } else {
                 alert("再生する楽曲がありません。");

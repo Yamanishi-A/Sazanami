@@ -6,7 +6,7 @@
         <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             
             <a href="<?php echo $is_logged_in ? '/playlists/index' : '/'; ?>" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <?php echo View::forge('shared/logo'); ?>
+                <?php echo \View::forge('shared/logo'); ?>
                 <h1 class="text-2xl tracking-wide text-primary font-bold">Sazanami</h1>
             </a>
 
@@ -47,7 +47,7 @@
 
                 <div class="flex justify-center mb-8">
                     <div class="flex items-center gap-2">
-                        <?php echo View::forge('shared/logo', array('class' => 'w-10 h-10 text-primary')); ?>
+                        <?php echo \View::forge('shared/logo', array('class' => 'w-10 h-10 text-primary')); ?>
                         <h1 class="text-3xl tracking-wide text-primary font-bold">Sazanami</h1>
                     </div>
                 </div>

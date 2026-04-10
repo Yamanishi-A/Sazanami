@@ -29,7 +29,7 @@
 </head>
 <body class="bg-slate-50">
     
-<?php echo View::forge('shared/header', array('user' => isset($user) ? $user : null)); ?>
+<?php echo \View::forge('shared/header', array('user' => isset($user) ? $user : null)); ?>
 
 <div id="user-page" class="min-h-screen relative overflow-hidden">
     <div class="fixed inset-0 -z-10 overflow-hidden">
