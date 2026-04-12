@@ -357,7 +357,7 @@
 
             fetch('/api/add_track', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.csrfToken },
                 body: JSON.stringify({
                     playlist_id: self.playlistId,
                     url: url
@@ -385,7 +385,7 @@
             
             fetch('/api/delete_track', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.csrfToken },
                 body: JSON.stringify({ pt_id: track.pt_id }) 
             })
             .then(response => response.json())
@@ -425,7 +425,7 @@
 
             fetch('/api/reorder_tracks', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.csrfToken },
                 body: JSON.stringify({
                     playlist_id: self.playlistId,
                     track_ids: orderedIds

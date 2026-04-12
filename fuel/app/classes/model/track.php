@@ -71,6 +71,50 @@ class Model_Track extends \Model
         return 'other';
     }
 
+    /**
+     * SSRF 対策：URL のホストがプライベート/予約済み IP に解決されないか検証する
+     */
+    private static function is_safe_url($url)
+    {
+        $parsed = parse_url($url);
+
+        // HTTP/HTTPS のみ許可
+        if (!isset($parsed['scheme']) || !in_array(strtolower($parsed['scheme']), array('http', 'https'))) {
+            return false;
+        }
+
+        $host = isset($parsed['host']) ? $parsed['host'] : '';
+        if (empty($host)) return false;
+
+        // ホスト名を IP に解決
+        $ip = gethostbyname($host);
+        if ($ip === $host) return false; // DNS 解決失敗
+
+        $long_ip = ip2long($ip);
+        if ($long_ip === false) return false; // IPv6 等、ip2long が扱えない場合は拒否
+
+        // アクセスを禁止するプライベート/予約済みアドレス範囲
+        $blocked_ranges = array(
+            array('0.0.0.0',         '0.255.255.255'),   // "This" network
+            array('10.0.0.0',        '10.255.255.255'),  // Private
+            array('100.64.0.0',      '100.127.255.255'), // Shared address space
+            array('127.0.0.0',       '127.255.255.255'), // Loopback
+            array('169.254.0.0',     '169.254.255.255'), // Link-local (クラウドメタデータ等)
+            array('172.16.0.0',      '172.31.255.255'),  // Private
+            array('192.168.0.0',     '192.168.255.255'), // Private
+            array('198.18.0.0',      '198.19.255.255'),  // Benchmark testing
+            array('240.0.0.0',       '255.255.255.255'), // Reserved
+        );
+
+        foreach ($blocked_ranges as $range) {
+            if ($long_ip >= ip2long($range[0]) && $long_ip <= ip2long($range[1])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private static function fetch_metadata($url, $platform)
     {
         $meta = array('title' => 'Unknown Track', 'artist' => 'Unknown Artist', 'thumbnail' => '');
@@ -81,7 +125,7 @@ class Model_Track extends \Model
         }
 
         if ($oembed_url) {
-            $context = stream_context_create(array('http' => array('ignore_errors' => true)));
+            $context = stream_context_create(array('http' => array('ignore_errors' => true, 'timeout' => 5)));
             $response = @file_get_contents($oembed_url, false, $context);
             if ($response && ($data = json_decode($response, true))) {
                 $meta['title']     = isset($data['title']) ? $data['title'] : $meta['title'];
@@ -91,8 +135,12 @@ class Model_Track extends \Model
             }
         }
 
-        // HTMLスクレイピング
-        $context = stream_context_create(array('http' => array('ignore_errors' => true, 'header' => "User-Agent: Mozilla/5.0\r\n")));
+        // HTMLスクレイピング（SSRF チェック通過済みの URL のみフェッチ）
+        if (!self::is_safe_url($url)) {
+            return $meta;
+        }
+
+        $context = stream_context_create(array('http' => array('ignore_errors' => true, 'timeout' => 5, 'header' => "User-Agent: Mozilla/5.0\r\n")));
         $html = @file_get_contents($url, false, $context);
         if ($html && preg_match('/<title[^>]*>(.*?)<\/title>/is', $html, $matches)) {
             $title = html_entity_decode(trim($matches[1]), ENT_QUOTES, 'UTF-8');

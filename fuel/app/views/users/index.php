@@ -375,6 +375,7 @@
 
             fetch('/api/save_playlist', {
                 method: 'POST',
+                headers: { 'X-CSRF-Token': window.csrfToken },
                 body: formData
             })
             .then(response => {
@@ -410,7 +411,7 @@
 
             fetch('/api/delete_playlist', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.csrfToken },
                 body: JSON.stringify({ id: playlist.id })
             })
             .then(response => response.json())

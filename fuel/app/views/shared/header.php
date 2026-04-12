@@ -1,7 +1,9 @@
-<?php 
-$is_logged_in = \Session::get('user_id') ? true : false; 
+<?php
+$is_logged_in = \Session::get('user_id') ? true : false;
 $user_id = \Session::get('user_id');
+$csrf_token = \Security::fetch_token();
 ?>
+<script>window.csrfToken = "<?php echo $csrf_token; ?>";</script>
 
 <div id="global-header-component">
     
@@ -18,6 +20,7 @@ $user_id = \Session::get('user_id');
                     <a href="/playlists" class="text-muted-foreground hover:text-primary transition-colors font-medium mr-2 hidden sm:block">Discover</a>
                     <a href="/users" class="text-muted-foreground hover:text-primary transition-colors font-medium mr-2 hidden sm:block">My Playlists</a>
                     <form action="/auth/logout" method="POST" class="hidden sm:block m-0 p-0">
+                        <input type="hidden" name="fuel_csrf_token" value="<?php echo $csrf_token; ?>">
                         <button type="submit" class="text-muted-foreground text-red-500 hover:text-red-600 transition-colors font-medium mr-2 bg-transparent border-none p-0 cursor-pointer">
                             Log Out
                         </button>
@@ -178,9 +181,10 @@ $user_id = \Session::get('user_id');
 
                     fetch('/auth/signup', {
                         method: 'POST',
-                        headers: { 
+                        headers: {
                             'Content-Type': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-Token': window.csrfToken
                         },
                         body: JSON.stringify({
                             username: self.signUpUsername(),
@@ -212,9 +216,10 @@ $user_id = \Session::get('user_id');
 
                     fetch('/auth/login', {
                         method: 'POST',
-                        headers: { 
+                        headers: {
                             'Content-Type': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-Token': window.csrfToken
                         },
                         body: JSON.stringify({
                             email: self.loginEmail(),

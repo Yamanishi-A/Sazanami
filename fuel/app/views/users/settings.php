@@ -131,7 +131,9 @@
                     </div>
 
                     <div class="pt-2 border-t border-gray-100">
-                        <label for="new-password" class="block text-sm font-bold mb-2 text-foreground">Update Password</label>
+                        <label for="current-password" class="block text-sm font-bold mb-2 text-foreground">Current Password</label>
+                        <input id="current-password" type="password" data-bind="value: currentPassword" placeholder="Enter current password" class="max-w-md w-full px-4 py-3 mb-3 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground">
+                        <label for="new-password" class="block text-sm font-bold mb-2 text-foreground">New Password</label>
                         <input id="new-password" type="password" data-bind="value: newPassword" placeholder="Enter new password" class="max-w-md w-full px-4 py-3 mb-3 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground">
                         <br>
                         <button type="button" data-bind="click: handlePasswordReset, disable: isSavingPassword" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-bold rounded-xl shadow-md hover:shadow-lg transition-all disabled:opacity-50">
@@ -170,16 +172,17 @@
         let self = this;
 
         // DB情報の読み込み
-        self.username = ko.observable("<?php echo htmlspecialchars($user['username'] ?? '', ENT_QUOTES, 'UTF-8'); ?>");
-        self.profileBio = ko.observable("<?php echo htmlspecialchars($user['bio'] ?? '', ENT_QUOTES, 'UTF-8'); ?>");
-        self.email = ko.observable("<?php echo htmlspecialchars($user['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>");
-        
+        self.username = ko.observable(<?php echo json_encode($user['username'] ?? ''); ?>);
+        self.profileBio = ko.observable(<?php echo json_encode($user['bio'] ?? ''); ?>);
+        self.email = ko.observable(<?php echo json_encode($user['email'] ?? ''); ?>);
+
         // アイコン関連
-        self.iconPreview = ko.observable("<?php echo isset($user['icon']) ? $user['icon'] : ''; ?>");
+        self.iconPreview = ko.observable(<?php echo json_encode($user['icon'] ?? ''); ?>);
         self.iconFile = ko.observable(null);
         self.removeIconFlag = ko.observable(false);
 
         // パスワード関連
+        self.currentPassword = ko.observable("");
         self.newPassword = ko.observable("");
         
         // UI状態管理
@@ -272,6 +275,7 @@
 
             fetch('/api/update_settings', {
                 method: 'POST',
+                headers: { 'X-CSRF-Token': window.csrfToken },
                 body: formData
             })
             .then(response => response.json())
@@ -292,17 +296,27 @@
 
         // パスワード変更処理
         self.handlePasswordReset = function() {
+            if (!self.currentPassword()) {
+                self.showAlert("現在のパスワードを入力してください。", "error");
+                return;
+            }
+            if (!self.newPassword()) {
+                self.showAlert("新しいパスワードを入力してください。", "error");
+                return;
+            }
+
             self.isSavingPassword(true);
 
             fetch('/api/reset_password', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: self.newPassword() })
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.csrfToken },
+                body: JSON.stringify({ current_password: self.currentPassword(), password: self.newPassword() })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     self.showAlert("Password updated successfully!", "success");
+                    self.currentPassword("");
                     self.newPassword("");
                 } else {
                     self.showAlert("Error: " + (data.error || "Failed to update password"), "error");
@@ -322,7 +336,8 @@
             
             if (confirmed) {
                 fetch('/api/delete_account', {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: { 'X-CSRF-Token': window.csrfToken }
                 })
                 .then(response => response.json())
                 .then(data => {
