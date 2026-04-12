@@ -9,26 +9,6 @@ class Controller_Api extends \Controller_Base
         return $response;
     }
 
-    public function post_create_playlist()
-    {
-        $user_id = \Session::get('user_id');
-        if (!$user_id) return $this->response_json(array('error' => 'ログインが必要です'), 401);
-        
-        $title = \Input::json('title');
-        $description = \Input::json('description');
-
-        if (empty($title)) {
-            return $this->response_json(array('error' => 'タイトルは必須です'), 400);
-        }
-
-        try {
-            $insert_id = \Model_Playlist::create($user_id, $title, $description);
-            return $this->response_json(array('id' => $insert_id, 'title' => $title, 'description' => $description));
-        } catch (\Exception $e) {
-            return $this->response_json(array('error' => '作成に失敗しました'), 500);
-        }
-    }
-
     public function post_add_track()
     {
         $user_id = \Session::get('user_id');
