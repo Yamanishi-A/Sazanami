@@ -9,24 +9,10 @@ class Controller_Playlists extends \Controller_Base
         return \Response::forge(\View::forge('playlists/index', $data));
     }
 
-    // 新規作成
-    public function post_create()
-    {
-        $user_id = \Session::get('user_id');
-        if (!$user_id) return $this->response_json(array('error' => 'ログインが必要です'), 401);
-
-        \Model_Playlist::create(
-            $user_id, 
-            \Input::post('title'), 
-            \Input::post('description')
-        );
-        \Response::redirect('/users');
-    }
-
     // 詳細表示
     public function action_view($id = null)
     {
-        if ($id === null) {
+        if (filter_var($id, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1))) === false) {
             return \Response::redirect('/playlists');
         }
 
@@ -55,40 +41,4 @@ class Controller_Playlists extends \Controller_Base
         return \Response::forge($view);
     }
 
-    // 編集
-    public function post_edit($id = null)
-    {
-        $user_id = \Session::get('user_id');
-        if (!$user_id) return $this->response_json(array('error' => 'ログインが必要です'), 401);
-
-        $update_data = array(
-            'title'       => \Input::post('title'),
-            'description' => \Input::post('description')
-        );
-
-        try {
-            \Model_Playlist::update($id, $user_id, $update_data);
-            \Response::redirect('/users');
-            return $this->response_json(array('success' => true));
-        } catch (\Exception $e) {
-            return $this->response_json(array('error' => '編集に失敗しました'), 500);
-        }
-
-    }
-
-    // 削除
-    public function post_delete($id = null)
-    {
-        $user_id = \Session::get('user_id');
-        if (!$user_id) return $this->response_json(array('error' => 'ログインが必要です'), 401);
-
-        try {
-            \Model_Playlist::delete($id, $user_id);
-            \Response::redirect('/users');
-            return $this->response_json(array('success' => true));
-        } catch (\Exception $e) {
-            return $this->response_json(array('error' => '削除に失敗しました'), 500);
-        }
-
-    }
 }

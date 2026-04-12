@@ -24,6 +24,19 @@ class Controller_Auth extends \Controller_Base
 
         $redirect_to = $this->sanitize_redirect(\Input::json('redirect_to'));
 
+        if (empty($username) || empty($email) || empty($password)) {
+            return \Response::forge(json_encode(array('success' => false, 'error' => '全ての項目を入力してください')), 400, array('Content-Type' => 'application/json'));
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return \Response::forge(json_encode(array('success' => false, 'error' => 'メールアドレスの形式が正しくありません')), 400, array('Content-Type' => 'application/json'));
+        }
+        if (strlen($password) < 8) {
+            return \Response::forge(json_encode(array('success' => false, 'error' => 'パスワードは8文字以上で入力してください')), 400, array('Content-Type' => 'application/json'));
+        }
+        if (mb_strlen($username) > 50) {
+            return \Response::forge(json_encode(array('success' => false, 'error' => 'ユーザー名は50文字以内で入力してください')), 400, array('Content-Type' => 'application/json'));
+        }
+
         try {
             $insert_id = \Model_User::create_user($username, $email, $password);
 
@@ -56,8 +69,12 @@ class Controller_Auth extends \Controller_Base
     {
         $email = \Input::json('email') ?: \Input::post('email');
         $password = \Input::json('password') ?: \Input::post('password');
-        
+
         $redirect_to = $this->sanitize_redirect(\Input::json('redirect_to'));
+
+        if (empty($email) || empty($password)) {
+            return \Response::forge(json_encode(array('success' => false, 'error' => 'メールアドレスとパスワードを入力してください')), 400, array('Content-Type' => 'application/json'));
+        }
 
         $user = \Model_User::authenticate($email, $password);
 

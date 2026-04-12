@@ -9,26 +9,6 @@ class Controller_Api extends \Controller_Base
         return $response;
     }
 
-    public function post_create_playlist()
-    {
-        $user_id = \Session::get('user_id');
-        if (!$user_id) return $this->response_json(array('error' => 'ログインが必要です'), 401);
-        
-        $title = \Input::json('title');
-        $description = \Input::json('description');
-
-        if (empty($title)) {
-            return $this->response_json(array('error' => 'タイトルは必須です'), 400);
-        }
-
-        try {
-            $insert_id = \Model_Playlist::create($user_id, $title, $description);
-            return $this->response_json(array('id' => $insert_id, 'title' => $title, 'description' => $description));
-        } catch (\Exception $e) {
-            return $this->response_json(array('error' => '作成に失敗しました'), 500);
-        }
-    }
-
     public function post_add_track()
     {
         $user_id = \Session::get('user_id');
@@ -37,6 +17,9 @@ class Controller_Api extends \Controller_Base
         $playlist_id = \Input::json('playlist_id');
         $url = \Input::json('url');
 
+        if (filter_var($playlist_id, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1))) === false) {
+            return $this->response_json(array('error' => '不正なプレイリストIDです'), 400);
+        }
         if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
             return $this->response_json(array('error' => 'Invalid URL'), 400);
         }
@@ -61,7 +44,9 @@ class Controller_Api extends \Controller_Base
         if (!$user_id) return $this->response_json(array('error' => 'ログインが必要です'), 401);
 
         $pt_id = \Input::json('pt_id');
-        if (empty($pt_id)) return $this->response_json(array('error' => 'IDが指定されていません'), 400);
+        if (filter_var($pt_id, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1))) === false) {
+            return $this->response_json(array('error' => 'IDが指定されていません'), 400);
+        }
 
         try {
             \Model_Track::delete_from_playlist($pt_id, $user_id);
@@ -77,9 +62,22 @@ class Controller_Api extends \Controller_Base
         $id = \Input::post('id');
         $title = \Input::post('title');
         $description = \Input::post('description');
-        
+
         $user_id = \Session::get('user_id');
         if (!$user_id) return $this->response_json(array('error' => 'ログインが必要です'), 401);
+
+        if (empty($title)) {
+            return $this->response_json(array('error' => 'タイトルは必須です'), 400);
+        }
+        if (mb_strlen($title) > 100) {
+            return $this->response_json(array('error' => 'タイトルは100文字以内で入力してください'), 400);
+        }
+        if (mb_strlen($description) > 500) {
+            return $this->response_json(array('error' => '説明は500文字以内で入力してください'), 400);
+        }
+        if ($id && filter_var($id, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1))) === false) {
+            return $this->response_json(array('error' => '不正なIDです'), 400);
+        }
 
         $cover_image = $this->handle_upload('cover_image');
 
@@ -105,7 +103,10 @@ class Controller_Api extends \Controller_Base
         $id = \Input::json('id');
         $user_id = \Session::get('user_id');
 
-        if (empty($id) || !$user_id) return $this->response_json(array('error' => '不正なリクエストです'), 400);
+        if (!$user_id) return $this->response_json(array('error' => 'ログインが必要です'), 401);
+        if (filter_var($id, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1))) === false) {
+            return $this->response_json(array('error' => '不正なリクエストです'), 400);
+        }
 
         try {
             \Model_Playlist::delete($id, $user_id);
@@ -120,9 +121,22 @@ class Controller_Api extends \Controller_Base
         $user_id = \Session::get('user_id');
         if (!$user_id) return $this->response_json(array('error' => 'ログインが必要です'), 401);
 
+        $username = \Input::post('username');
+        $bio = \Input::post('bio');
+
+        if (empty($username)) {
+            return $this->response_json(array('error' => 'ユーザー名は必須です'), 400);
+        }
+        if (mb_strlen($username) > 50) {
+            return $this->response_json(array('error' => 'ユーザー名は50文字以内で入力してください'), 400);
+        }
+        if (mb_strlen($bio) > 500) {
+            return $this->response_json(array('error' => '自己紹介は500文字以内で入力してください'), 400);
+        }
+
         $update_data = array(
-            'username' => \Input::post('username'),
-            'bio' => \Input::post('bio')
+            'username' => $username,
+            'bio'      => $bio,
         );
 
         $icon_url = $this->handle_upload('icon');
@@ -149,6 +163,9 @@ class Controller_Api extends \Controller_Base
 
         if (!$user_id || empty($current_password) || empty($new_password)) {
             return $this->response_json(array('error' => 'Invalid request'), 400);
+        }
+        if (strlen($new_password) < 8) {
+            return $this->response_json(array('error' => 'パスワードは8文字以上で入力してください'), 400);
         }
 
         // 現在のパスワードを検証してから変更を許可
@@ -186,8 +203,16 @@ class Controller_Api extends \Controller_Base
         $playlist_id = \Input::json('playlist_id');
         $track_ids = \Input::json('track_ids');
 
-        if (!$user_id || empty($playlist_id) || !is_array($track_ids)) {
+        if (!$user_id || !is_array($track_ids)) {
             return $this->response_json(array('error' => 'Invalid request'), 400);
+        }
+        if (filter_var($playlist_id, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1))) === false) {
+            return $this->response_json(array('error' => 'Invalid request'), 400);
+        }
+        foreach ($track_ids as $tid) {
+            if (filter_var($tid, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1))) === false) {
+                return $this->response_json(array('error' => 'Invalid request'), 400);
+            }
         }
 
         try {
