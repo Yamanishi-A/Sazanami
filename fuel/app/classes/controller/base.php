@@ -8,6 +8,22 @@ class Controller_Base extends \Controller
     {
         parent::before();
 
+        // CSRF 検証：すべての POST リクエストに対して実施
+        if (\Input::method() === 'POST') {
+            $header_token = isset($_SERVER['HTTP_X_CSRF_TOKEN']) ? $_SERVER['HTTP_X_CSRF_TOKEN'] : '';
+            $post_token   = \Input::post(\Config::get('security.csrf_token_key', 'fuel_csrf_token'), '');
+            $expected     = \Security::fetch_token();
+
+            if ($header_token !== $expected && $post_token !== $expected) {
+                if (\Input::is_ajax()) {
+                    $res = \Response::forge(json_encode(array('error' => 'CSRF token mismatch')), 403);
+                    $res->set_header('Content-Type', 'application/json');
+                    return $res;
+                }
+                return \Response::forge('CSRF validation failed', 403);
+            }
+        }
+
         $user_id = \Session::get('user_id');
 
         if ($user_id) {

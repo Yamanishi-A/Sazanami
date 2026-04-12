@@ -47,6 +47,10 @@ class Controller_Api extends \Controller_Base
             return $this->response_json(array('success' => true, 'track' => $track_data));
         } catch (\Exception $e) {
             $status = $e->getCode() ?: 400;
+            if ($status >= 500 || $status === 0) {
+                \Log::error('add_track: ' . $e->getMessage());
+                return $this->response_json(array('error' => 'トラックの追加に失敗しました'), 500);
+            }
             return $this->response_json(array('error' => $e->getMessage()), $status);
         }
     }
@@ -139,16 +143,26 @@ class Controller_Api extends \Controller_Base
 
     public function post_reset_password()
     {
-        $user_id = \Session::get('user_id');
-        $new_password = \Input::json('password');
+        $user_id         = \Session::get('user_id');
+        $current_password = \Input::json('current_password');
+        $new_password    = \Input::json('password');
 
-        if (!$user_id || empty($new_password)) return $this->response_json(array('error' => 'Invalid request'), 400);
+        if (!$user_id || empty($current_password) || empty($new_password)) {
+            return $this->response_json(array('error' => 'Invalid request'), 400);
+        }
+
+        // 現在のパスワードを検証してから変更を許可
+        $user = \Model_User::get_user_by_id($user_id);
+        if (!$user || !password_verify($current_password, $user['password_hash'])) {
+            return $this->response_json(array('error' => '現在のパスワードが正しくありません'), 403);
+        }
 
         try {
             \Model_User::reset_password($user_id, $new_password);
             return $this->response_json(array('success' => true));
         } catch (\Exception $e) {
-            return $this->response_json(array('error' => $e->getMessage()), 500);
+            \Log::error('reset_password: ' . $e->getMessage());
+            return $this->response_json(array('error' => 'パスワードの変更に失敗しました'), 500);
         }
     }
 
@@ -181,6 +195,10 @@ class Controller_Api extends \Controller_Base
             return $this->response_json(array('success' => true));
         } catch (\Exception $e) {
             $status = $e->getCode() ?: 500;
+            if ($status >= 500 || $status === 0) {
+                \Log::error('reorder_tracks: ' . $e->getMessage());
+                return $this->response_json(array('error' => '順番の保存に失敗しました'), 500);
+            }
             return $this->response_json(array('error' => $e->getMessage()), $status);
         }
     }
@@ -193,16 +211,29 @@ class Controller_Api extends \Controller_Base
         if (!empty($_FILES) && isset($_FILES[$field_name]) && $_FILES[$field_name]['error'] !== UPLOAD_ERR_NO_FILE) {
             \Config::load('sazanami', true);
 
-            $web_path = \Config::get('sazanami.upload.paths.' . $field_name);
+            $web_path    = \Config::get('sazanami.upload.paths.' . $field_name);
             $allowed_ext = \Config::get('sazanami.upload.allowed_extensions');
+
+            // 拡張子とファイルの実際の中身（MIME タイプ）を両方検証する
+            $allowed_mime = array('image/jpeg', 'image/png', 'image/gif');
+            $tmp_path = $_FILES[$field_name]['tmp_name'];
+
+            if (!is_uploaded_file($tmp_path)) return null;
+
+            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+            $mime  = $finfo->file($tmp_path);
+
+            if (!in_array($mime, $allowed_mime, true)) {
+                return null;
+            }
 
             $upload_dir = DOCROOT . ltrim($web_path, '/');
 
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+            if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
 
             $config = array(
-                'path' => $upload_dir,
-                'randomize' => true,
+                'path'          => $upload_dir,
+                'randomize'     => true,
                 'ext_whitelist' => $allowed_ext,
             );
 
