@@ -12,7 +12,7 @@ class Controller_Playlists extends \Controller_Base
     // 詳細表示
     public function action_view($id = null)
     {
-        if ($id === null) {
+        if (filter_var($id, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1))) === false) {
             return \Response::redirect('/playlists');
         }
 
